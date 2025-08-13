@@ -1,8 +1,24 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Appointment, AppointmentType, AppointmentStatus, User, Pediatrician, Location, Product } from '../../../types';
+	import type {
+		Appointment,
+		AppointmentType,
+		AppointmentStatus,
+		User,
+		Pediatrician,
+		Location,
+		Product,
+	} from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import { collection, addDoc, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
+	import {
+		collection,
+		addDoc,
+		serverTimestamp,
+		getDocs,
+		query,
+		where,
+		orderBy,
+	} from 'firebase/firestore';
 	import { onMount } from 'svelte';
 
 	let loading = false;
@@ -30,15 +46,29 @@
 		type: 'consultation' as AppointmentType,
 		productIds: [] as string[],
 		status: 'scheduled' as AppointmentStatus,
-		notes: ''
+		notes: '',
 	};
 
 	// Local state for datetime input
 	let dateTimeInput = '';
 
 	// Available options
-	const appointmentTypes: AppointmentType[] = ['vaccination', 'consultation', 'packageApplication', 'checkup', 'followUp'];
-	const appointmentStatuses: AppointmentStatus[] = ['scheduled', 'pending', 'completed', 'cancelledByUser', 'cancelledByClinic', 'noShow', 'rescheduled'];
+	const appointmentTypes: AppointmentType[] = [
+		'vaccination',
+		'consultation',
+		'packageApplication',
+		'checkup',
+		'followUp',
+	];
+	const appointmentStatuses: AppointmentStatus[] = [
+		'scheduled',
+		'pending',
+		'completed',
+		'cancelledByUser',
+		'cancelledByClinic',
+		'noShow',
+		'rescheduled',
+	];
 	const durationOptions = [15, 30, 45, 60, 90, 120];
 
 	// Validation
@@ -52,41 +82,45 @@
 		try {
 			// Load patients (normal users)
 			const patientsSnapshot = await getDocs(
-				query(collection(db, 'users'), where('userType', '==', 'normal'), orderBy('displayName'))
+				query(
+					collection(db, 'users'),
+					where('userType', '==', 'normal'),
+					orderBy('displayName'),
+				),
 			);
-			patients = patientsSnapshot.docs.map(doc => ({
+			patients = patientsSnapshot.docs.map((doc) => ({
 				id: doc.id,
 				...doc.data(),
 				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null
+				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
 			})) as User[];
 
 			// Load pediatricians
 			const pediatriciansSnapshot = await getDocs(
-				query(collection(db, 'pediatricians'), orderBy('displayName'))
+				query(collection(db, 'pediatricians'), orderBy('displayName')),
 			);
-			pediatricians = pediatriciansSnapshot.docs.map(doc => ({
+			pediatricians = pediatriciansSnapshot.docs.map((doc) => ({
 				id: doc.id,
 				...doc.data(),
 				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null
+				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
 			})) as Pediatrician[];
 
 			// Load locations
 			const locationsSnapshot = await getDocs(
-				query(collection(db, 'locations'), orderBy('name'))
+				query(collection(db, 'locations'), orderBy('name')),
 			);
-			locations = locationsSnapshot.docs.map(doc => ({
+			locations = locationsSnapshot.docs.map((doc) => ({
 				id: doc.id,
 				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date()
+				createdAt: doc.data().createdAt?.toDate() || new Date(),
 			})) as Location[];
 
 			// Load products
 			const productsSnapshot = await getDocs(
-				query(collection(db, 'products'), orderBy('name'))
+				query(collection(db, 'products'), orderBy('name')),
 			);
-			products = productsSnapshot.docs.map(doc => {
+			products = productsSnapshot.docs.map((doc) => {
 				const data = doc.data();
 				return {
 					id: doc.id,
@@ -111,10 +145,9 @@
 					includedDoseBundles: data.includedDoseBundles || null,
 					targetMilestone: data.targetMilestone || null,
 					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date()
+					updatedAt: data.updatedAt?.toDate() || new Date(),
 				} as Product;
 			});
-
 		} catch (error) {
 			console.error('Error loading form data:', error);
 			errorMessage = 'Error al cargar los datos del formulario';
@@ -158,14 +191,14 @@
 	};
 
 	const handlePatientChange = () => {
-		const selectedPatient = patients.find(p => p.id === formData.patientId);
+		const selectedPatient = patients.find((p) => p.id === formData.patientId);
 		if (selectedPatient) {
 			formData.patientName = selectedPatient.displayName || selectedPatient.email;
 		}
 	};
 
 	const handleDoctorChange = () => {
-		const selectedDoctor = pediatricians.find(d => d.id === formData.doctorId);
+		const selectedDoctor = pediatricians.find((d) => d.id === formData.doctorId);
 		if (selectedDoctor) {
 			formData.doctorName = selectedDoctor.displayName || selectedDoctor.email;
 			formData.doctorSpecialty = selectedDoctor.specialty;
@@ -173,10 +206,17 @@
 	};
 
 	const handleLocationChange = () => {
-		const selectedLocation = locations.find(l => l.id === formData.locationId);
+		const selectedLocation = locations.find((l) => l.id === formData.locationId);
 		if (selectedLocation) {
 			formData.locationName = selectedLocation.name;
 			formData.locationAddress = selectedLocation.address;
+		}
+	};
+
+	const handleProductChange = (e: Event) => {
+		const target = e.target as HTMLSelectElement;
+		if (target.value) {
+			addProduct(target.value);
 		}
 	};
 
@@ -187,11 +227,11 @@
 	};
 
 	const removeProduct = (productIdToRemove: string) => {
-		formData.productIds = formData.productIds.filter(id => id !== productIdToRemove);
+		formData.productIds = formData.productIds.filter((id) => id !== productIdToRemove);
 	};
 
 	const getProductName = (productId: string) => {
-		const product = products.find(p => p.id === productId);
+		const product = products.find((p) => p.id === productId);
 		return product ? product.name : 'Producto no encontrado';
 	};
 
@@ -223,7 +263,7 @@
 				notes: formData.notes,
 				createdAt: serverTimestamp(),
 				updatedAt: serverTimestamp(),
-				lastUpdatedAt: serverTimestamp()
+				lastUpdatedAt: serverTimestamp(),
 			};
 
 			await addDoc(collection(db, 'appointments'), appointmentData);
@@ -232,7 +272,6 @@
 			setTimeout(() => {
 				goto('/appointments');
 			}, 1500);
-
 		} catch (error) {
 			console.error('Error creating appointment:', error);
 			errorMessage = 'Error al crear la cita. Por favor, inténtalo de nuevo.';
@@ -281,12 +320,12 @@
 			<!-- Patient and Doctor Selection -->
 			<div class="form-section">
 				<h3>Paciente y Doctor</h3>
-				
+
 				<div class="form-row">
 					<div class="form-group">
 						<label for="patientId">Paciente *</label>
-						<select 
-							id="patientId" 
+						<select
+							id="patientId"
 							bind:value={formData.patientId}
 							on:change={handlePatientChange}
 							class:error={errors.patientId}
@@ -305,8 +344,8 @@
 
 					<div class="form-group">
 						<label for="doctorId">Doctor *</label>
-						<select 
-							id="doctorId" 
+						<select
+							id="doctorId"
 							bind:value={formData.doctorId}
 							on:change={handleDoctorChange}
 							class:error={errors.doctorId}
@@ -326,8 +365,8 @@
 
 				<div class="form-group">
 					<label for="locationId">Ubicación *</label>
-					<select 
-						id="locationId" 
+					<select
+						id="locationId"
 						bind:value={formData.locationId}
 						on:change={handleLocationChange}
 						class:error={errors.locationId}
@@ -348,18 +387,24 @@
 			<!-- Appointment Details -->
 			<div class="form-section">
 				<h3>Detalles de la Cita</h3>
-				
+
 				<div class="form-row">
 					<div class="form-group">
 						<label for="type">Tipo de Cita *</label>
 						<select id="type" bind:value={formData.type}>
 							{#each appointmentTypes as type}
 								<option value={type}>
-									{type === 'vaccination' ? 'Vacunación' :
-									 type === 'consultation' ? 'Consulta' :
-									 type === 'packageApplication' ? 'Aplicación de Paquete' :
-									 type === 'checkup' ? 'Revisión' :
-									 type === 'followUp' ? 'Seguimiento' : type}
+									{type === 'vaccination'
+										? 'Vacunación'
+										: type === 'consultation'
+										? 'Consulta'
+										: type === 'packageApplication'
+										? 'Aplicación de Paquete'
+										: type === 'checkup'
+										? 'Revisión'
+										: type === 'followUp'
+										? 'Seguimiento'
+										: type}
 								</option>
 							{/each}
 						</select>
@@ -370,13 +415,21 @@
 						<select id="status" bind:value={formData.status}>
 							{#each appointmentStatuses as status}
 								<option value={status}>
-									{status === 'scheduled' ? 'Programada' :
-									 status === 'pending' ? 'Pendiente' :
-									 status === 'completed' ? 'Completada' :
-									 status === 'cancelledByUser' ? 'Cancelada por Usuario' :
-									 status === 'cancelledByClinic' ? 'Cancelada por Clínica' :
-									 status === 'noShow' ? 'No Presentó' :
-									 status === 'rescheduled' ? 'Reprogramada' : status}
+									{status === 'scheduled'
+										? 'Programada'
+										: status === 'pending'
+										? 'Pendiente'
+										: status === 'completed'
+										? 'Completada'
+										: status === 'cancelledByUser'
+										? 'Cancelada por Usuario'
+										: status === 'cancelledByClinic'
+										? 'Cancelada por Clínica'
+										: status === 'noShow'
+										? 'No Presentó'
+										: status === 'rescheduled'
+										? 'Reprogramada'
+										: status}
 								</option>
 							{/each}
 						</select>
@@ -411,13 +464,10 @@
 			<!-- Products/Services -->
 			<div class="form-section">
 				<h3>Productos y Servicios</h3>
-				
+
 				<div class="form-group">
 					<label>Productos Relacionados</label>
-					<select on:change={(e) => {
-						const target = e.target as HTMLSelectElement;
-						if (target.value) addProduct(target.value);
-					}}>
+					<select on:change={handleProductChange}>
 						<option value="">Seleccionar producto</option>
 						{#each products as product}
 							<option value={product.id}>
@@ -425,8 +475,11 @@
 							</option>
 						{/each}
 					</select>
-					<p class="help-text">Selecciona productos relacionados con esta cita (vacunas, medicamentos, etc.)</p>
-					
+					<p class="help-text">
+						Selecciona productos relacionados con esta cita (vacunas, medicamentos,
+						etc.)
+					</p>
+
 					{#if formData.productIds.length > 0}
 						<div class="selected-products">
 							<h4>Productos Seleccionados:</h4>
@@ -434,10 +487,11 @@
 								{#each formData.productIds as productId}
 									<span class="product-tag">
 										{getProductName(productId)}
-										<button 
-											type="button" 
-											on:click={() => removeProduct(productId)} 
-											class="remove-product">×</button>
+										<button
+											type="button"
+											on:click={() => removeProduct(productId)}
+											class="remove-product">×</button
+										>
 									</span>
 								{/each}
 							</div>
@@ -449,7 +503,7 @@
 			<!-- Notes -->
 			<div class="form-section">
 				<h3>Notas Adicionales</h3>
-				
+
 				<div class="form-group">
 					<label for="notes">Notas</label>
 					<textarea
@@ -458,13 +512,20 @@
 						placeholder="Información adicional sobre la cita, instrucciones especiales, etc."
 						rows="4"
 					/>
-					<p class="help-text">Agrega cualquier información adicional relevante para la cita</p>
+					<p class="help-text">
+						Agrega cualquier información adicional relevante para la cita
+					</p>
 				</div>
 			</div>
 		</div>
 
 		<div class="form-actions">
-			<button type="button" on:click={handleCancel} class="btn btn-secondary" disabled={loading}>
+			<button
+				type="button"
+				on:click={handleCancel}
+				class="btn btn-secondary"
+				disabled={loading}
+			>
 				Cancelar
 			</button>
 			<button type="submit" class="btn btn-primary" disabled={loading}>

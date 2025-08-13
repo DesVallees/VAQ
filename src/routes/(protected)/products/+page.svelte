@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Product, ProductType } from '../../../types';
+	import type { Product, ProductType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
 

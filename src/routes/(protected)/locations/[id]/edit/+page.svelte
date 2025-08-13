@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import type { Location } from '../../../types';
+	import type { Location } from '../../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { onMount } from 'svelte';

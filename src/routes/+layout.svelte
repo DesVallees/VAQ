@@ -45,7 +45,7 @@
 
 	const handleLogout = async () => {
 		await signOut(auth);
-		goto('/login');
+		goto('/');
 	};
 </script>
 

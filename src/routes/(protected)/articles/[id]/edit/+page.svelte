@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import type { Article, ArticleCategory } from '../../../types';
+	import type { Article, ArticleCategory } from '../../../../types';
 	import { db, storage } from '$lib/firebase/vaqmas';
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -51,9 +51,9 @@
 					tags: data.tags || [],
 					author: data.author || '',
 					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date()
+					updatedAt: data.updatedAt?.toDate() || new Date(),
 				} as Article;
-				
+
 				// Initialize form data
 				formData = { ...article };
 				imagePreview = article.heroImageUrl || null;
@@ -94,7 +94,7 @@
 		const target = event.target as HTMLInputElement;
 		if (target.files && target.files[0]) {
 			imageFile = target.files[0];
-			
+
 			// Create preview
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -122,7 +122,16 @@
 	};
 
 	const removeTag = (tagToRemove: string) => {
-		formData.tags = formData.tags?.filter(tag => tag !== tagToRemove) || [];
+		formData.tags = formData.tags?.filter((tag) => tag !== tagToRemove) || [];
+	};
+
+	const handlePublishedAtChange = (e: Event) => {
+		const target = e.target as HTMLInputElement;
+		if (target.value) {
+			formData.publishedAt = new Date(target.value);
+		} else {
+			formData.publishedAt = undefined;
+		}
 	};
 
 	const handleSubmit = async () => {
@@ -157,12 +166,12 @@
 			const updateData = {
 				...formData,
 				updatedAt: serverTimestamp(),
-				publishedAt: formData.publishedAt ? new Date(formData.publishedAt) : null
+				publishedAt: formData.publishedAt ? new Date(formData.publishedAt) : null,
 			};
 
 			// Remove undefined values and id
 			delete updateData.id;
-			Object.keys(updateData).forEach(key => {
+			Object.keys(updateData).forEach((key) => {
 				if (updateData[key as keyof typeof updateData] === undefined) {
 					delete updateData[key as keyof typeof updateData];
 				}
@@ -174,7 +183,6 @@
 			setTimeout(() => {
 				goto('/articles');
 			}, 1500);
-
 		} catch (error) {
 			console.error('Error updating article:', error);
 			errorMessage = 'Error al actualizar el artículo. Por favor, inténtalo de nuevo.';
@@ -188,7 +196,12 @@
 	};
 
 	const handleDelete = async () => {
-		if (!article || !confirm('¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.')) {
+		if (
+			!article ||
+			!confirm(
+				'¿Estás seguro de que quieres eliminar este artículo? Esta acción no se puede deshacer.',
+			)
+		) {
 			return;
 		}
 
@@ -205,14 +218,13 @@
 
 			// Delete document
 			await updateDoc(doc(db, 'articles', article.id), {
-				deletedAt: serverTimestamp()
+				deletedAt: serverTimestamp(),
 			});
 
 			successMessage = 'Artículo eliminado exitosamente';
 			setTimeout(() => {
 				goto('/articles');
 			}, 1500);
-
 		} catch (error) {
 			console.error('Error deleting article:', error);
 			errorMessage = 'Error al eliminar el artículo';
@@ -253,7 +265,7 @@
 				<!-- Basic Information -->
 				<div class="form-section">
 					<h3>Información Básica</h3>
-					
+
 					<div class="form-row">
 						<div class="form-group">
 							<label for="title">Título del Artículo *</label>
@@ -290,9 +302,13 @@
 							<select id="category" bind:value={formData.category}>
 								{#each articleCategories as category}
 									<option value={category}>
-										{category === 'education' ? 'Educación' :
-										 category === 'promotion' ? 'Promoción' :
-										 category === 'announcement' ? 'Anuncio' : category}
+										{category === 'education'
+											? 'Educación'
+											: category === 'promotion'
+											? 'Promoción'
+											: category === 'announcement'
+											? 'Anuncio'
+											: category}
 									</option>
 								{/each}
 							</select>
@@ -303,15 +319,10 @@
 							<input
 								id="publishedAt"
 								type="datetime-local"
-								value={formData.publishedAt ? new Date(formData.publishedAt).toISOString().slice(0, 16) : ''}
-								on:change={(e) => {
-									const target = e.target as HTMLInputElement;
-									if (target.value) {
-										formData.publishedAt = new Date(target.value);
-									} else {
-										formData.publishedAt = null;
-									}
-								}}
+								value={formData.publishedAt
+									? new Date(formData.publishedAt).toISOString().slice(0, 16)
+									: ''}
+								on:change={handlePublishedAtChange}
 							/>
 						</div>
 					</div>
@@ -334,7 +345,7 @@
 				<!-- Article Content -->
 				<div class="form-section">
 					<h3>Contenido del Artículo</h3>
-					
+
 					<div class="form-group">
 						<label for="body">Contenido *</label>
 						<textarea
@@ -357,7 +368,7 @@
 				<!-- Tags -->
 				<div class="form-section">
 					<h3>Etiquetas</h3>
-					
+
 					<div class="form-group">
 						<label>Etiquetas</label>
 						<input
@@ -368,7 +379,7 @@
 						<p class="help-text">
 							Agrega etiquetas para facilitar la búsqueda del artículo
 						</p>
-						
+
 						{#if formData.tags && formData.tags.length > 0}
 							<div class="tags-container">
 								{#each formData.tags as tag}
@@ -377,7 +388,8 @@
 										<button
 											type="button"
 											on:click={() => removeTag(tag)}
-											class="remove-tag">×</button>
+											class="remove-tag">×</button
+										>
 									</span>
 								{/each}
 							</div>
@@ -388,7 +400,7 @@
 				<!-- Hero Image -->
 				<div class="form-section">
 					<h3>Imagen Principal</h3>
-					
+
 					<div class="form-group">
 						<label for="heroImage">Imagen Principal</label>
 						<input
@@ -407,17 +419,28 @@
 						<div class="image-preview">
 							<img src={imagePreview} alt="Vista previa" />
 							<button type="button" on:click={removeImage} class="remove-image"
-								>Eliminar Imagen</button>
+								>Eliminar Imagen</button
+							>
 						</div>
 					{/if}
 				</div>
 			</div>
 
 			<div class="form-actions">
-				<button type="button" on:click={handleCancel} class="btn btn-secondary" disabled={saving}>
+				<button
+					type="button"
+					on:click={handleCancel}
+					class="btn btn-secondary"
+					disabled={saving}
+				>
 					Cancelar
 				</button>
-				<button type="button" on:click={handleDelete} class="btn btn-danger" disabled={saving}>
+				<button
+					type="button"
+					on:click={handleDelete}
+					class="btn btn-danger"
+					disabled={saving}
+				>
 					Eliminar
 				</button>
 				<button type="submit" class="btn btn-primary" disabled={saving}>

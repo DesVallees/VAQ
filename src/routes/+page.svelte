@@ -211,7 +211,7 @@
 						</svg>
 						<div>
 							<h4>Email</h4>
-							<p>info@vaqplus.com</p>
+							<p>info@vaqmas.com</p>
 						</div>
 					</div>
 					<div class="contact-item">
