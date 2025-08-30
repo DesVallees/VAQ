@@ -15,6 +15,25 @@
     --primary-800: #00777c;
     --primary-900: #00666a;
 
+    /* Legacy color variables for backward compatibility */
+    --color-primary: var(--primary-500);
+    --color-primary-light: var(--primary-100);
+    --color-primary-dark: var(--primary-700);
+    --color-secondary: var(--secondary-500);
+    --color-secondary-dark: var(--secondary-700);
+    --color-text-primary: var(--neutral-900);
+    --color-text-secondary: var(--neutral-600);
+    --color-border: var(--neutral-300);
+    --color-background-light: var(--neutral-50);
+    --color-error: var(--error-500);
+    --color-error-light: var(--error-50);
+    --color-error-dark: var(--error-700);
+    --color-success: var(--success-500);
+    --color-success-light: var(--success-50);
+    --border-radius: var(--radius-lg);
+    --shadow-card: var(--shadow-sm);
+    --content: var(--primary-500);
+
     --secondary-50: #f0f9e6;
     --secondary-100: #d9f0b3;
     --secondary-200: #c2e780;
@@ -136,6 +155,7 @@
     --radius-lg: 0.5rem;
     --radius-xl: 0.75rem;
     --radius-2xl: 1rem;
+    --radius-full: 9999px;
 
     /* Transitions */
     --transition-fast: 150ms ease-in-out;

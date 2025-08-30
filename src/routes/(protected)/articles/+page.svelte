@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import type { Article, ArticleCategory } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
+	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
+	import { getProductImageURL, getFallbackImage } from '../../lib/utils/imageUtils';
 
 	let articles: Article[] = [];
 	let loading = true;
@@ -18,9 +19,7 @@
 	const loadArticles = async () => {
 		loading = true;
 		try {
-			const articlesSnapshot = await getDocs(
-				query(collection(db, 'articles'), orderBy('createdAt', 'desc')),
-			);
+			const articlesSnapshot = await getDocs(collection(db, 'articles'));
 			articles = articlesSnapshot.docs.map((doc) => ({
 				id: doc.id,
 				...doc.data(),
@@ -35,7 +34,7 @@
 	};
 
 	const handleDelete = async (article: Article) => {
-		if (confirm(`¿Estás seguro de que quieres eliminar el artículo "${article.title}"?`)) {
+		if (confirm(`¿Estás seguro de que quieres eliminar "${article.title}"?`)) {
 			try {
 				await deleteDoc(doc(db, 'articles', article.id));
 				await loadArticles();
@@ -46,7 +45,7 @@
 		}
 	};
 
-	const showArticleDetails = (article: Article) => {
+	const openDetails = (article: Article) => {
 		selectedArticle = article;
 		showDetails = true;
 	};
@@ -58,11 +57,7 @@
 
 	const formatDate = (date: Date | null) => {
 		if (!date) return 'No publicado';
-		return date.toLocaleDateString('es-CO', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric',
-		});
+		return date.toLocaleDateString('es-CO');
 	};
 
 	const formatDateTime = (date: Date | null) => {
@@ -87,11 +82,11 @@
 
 	const getCategoryColor = (category: ArticleCategory) => {
 		const colorMap = {
-			education: 'var(--secondary-500)',
-			promotion: 'var(--primary-500)',
-			announcement: 'var(--warning-500)',
+			education: '#10b981',
+			promotion: '#f59e0b',
+			announcement: '#3b82f6',
 		};
-		return colorMap[category] || 'var(--neutral-500)';
+		return colorMap[category] || '#6b7280';
 	};
 
 	const getCategoryBadgeClass = (category: ArticleCategory) => {
@@ -120,6 +115,23 @@
 	$: draftArticles = articles.filter((a) => !a.publishedAt).length;
 	$: totalCategories = categories.length;
 	$: totalViews = 0; // Articles don't have view count in current schema
+
+	// Function to handle image loading errors
+	const handleImageError = (event: Event, article: Article) => {
+		const img = event.target as HTMLImageElement;
+		img.style.display = 'none';
+
+		// Create a fallback element
+		const fallback = document.createElement('div');
+		fallback.className = 'article-image-fallback';
+		fallback.innerHTML = `
+			<svg viewBox="0 0 24 24">
+				<path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+			</svg>
+		`;
+
+		img.parentNode?.insertBefore(fallback, img);
+	};
 </script>
 
 <div class="articles-page">
@@ -208,8 +220,10 @@
 									<div class="article-image">
 										{#if article.heroImageUrl}
 											<img
-												src={article.heroImageUrl}
+												src={getProductImageURL(article.heroImageUrl)}
 												alt="Imagen destacada"
+												on:error={(event) =>
+													handleImageError(event, article)}
 											/>
 										{:else}
 											<svg viewBox="0 0 24 24">
@@ -266,7 +280,7 @@
 								<div class="action-buttons">
 									<button
 										class="action-btn view"
-										on:click={() => showArticleDetails(article)}
+										on:click={() => openDetails(article)}
 										title="Ver detalles"
 									>
 										<svg viewBox="0 0 24 24">
@@ -429,9 +443,11 @@
 							<h3>Imagen Destacada</h3>
 							<div class="detail-item full-width">
 								<img
-									src={selectedArticle.heroImageUrl}
+									src={getProductImageURL(selectedArticle.heroImageUrl)}
 									alt="Imagen destacada"
 									class="featured-image"
+									on:error={(event) =>
+										selectedArticle && handleImageError(event, selectedArticle)}
 								/>
 							</div>
 						</div>
@@ -561,6 +577,26 @@
 	.article-image svg {
 		width: 24px;
 		height: 24px;
+		color: var(--neutral-500);
+	}
+
+	.article-image-fallback {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: var(--neutral-100);
+		border-radius: var(--radius-lg);
+		z-index: 1;
+	}
+
+	.article-image-fallback svg {
+		width: 48px;
+		height: 48px;
 		color: var(--neutral-500);
 	}
 

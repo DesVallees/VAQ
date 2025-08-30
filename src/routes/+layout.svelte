@@ -24,7 +24,7 @@
 
 					// Redirect authenticated users to dashboard ONLY if they're on main page or login
 					// Don't redirect from protected routes like /products, /appointments, etc.
-					if ($page.url.pathname === '/vaqmas' || $page.url.pathname === '/login') {
+					if ($page.url.pathname === '/' || $page.url.pathname === '/login') {
 						goto('/dashboard');
 					}
 				} else {

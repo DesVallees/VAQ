@@ -28,6 +28,7 @@ export interface Product extends BaseDocument {
     includedProductIds: string[] | null;
     includedDoseBundles: string[] | null;
     targetMilestone: string | null;
+    resolvedImageUrl?: string;
 }
 
 // Article types
@@ -73,7 +74,7 @@ export interface Pediatrician extends BaseDocument {
     phoneNumber: string;
     lastLoginAt: Date | null;
     isAdmin: boolean;
-    userType: UserType.pediatrician;
+    userType: 'pediatrician';
     specialty: string;
     licenseNumber: string;
     clinicLocationIds: string[];
@@ -350,48 +351,3 @@ export interface UserStats {
     activeThisMonth: number;
     byType: { type: UserType; count: number }[];
 }
-
-// Export all types
-export type {
-    BaseDocument,
-    Product,
-    ProductType,
-    Article,
-    ArticleCategory,
-    Location,
-    User,
-    UserType,
-    Pediatrician,
-    Appointment,
-    AppointmentType,
-    AppointmentStatus,
-    MedicalHistory,
-    Allergy,
-    MedicalCondition,
-    Medication,
-    SurgicalHistory,
-    Hospitalization,
-    ImmunizationHistory,
-    FamilyHistory,
-    ObGynHistory,
-    Severity,
-    AllergyType,
-    ConditionStatus,
-    MedicationType,
-    Relationship,
-    TobaccoStatus,
-    ProductFormData,
-    ArticleFormData,
-    LocationFormData,
-    UserFormData,
-    PediatricianFormData,
-    AppointmentFormData,
-    ApiResponse,
-    PaginatedResponse,
-    ProductFilters,
-    AppointmentFilters,
-    UserFilters,
-    AppointmentStats,
-    RevenueStats,
-    UserStats
-};

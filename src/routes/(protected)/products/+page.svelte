@@ -3,6 +3,7 @@
 	import type { Product, ProductType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
+	import { getImageUrl, getFallbackImage } from '../../lib/utils/imageUtils';
 
 	let products: Product[] = [];
 	let loading = true;
@@ -16,11 +17,18 @@
 		loading = true;
 		try {
 			const productsSnapshot = await getDocs(collection(db, 'products'));
-			products = productsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-			})) as Product[];
+			products = await Promise.all(
+				productsSnapshot.docs.map(async (docSnap) => {
+					const data = docSnap.data();
+					const resolvedImageUrl = await getImageUrl(data.imageUrl, data.type);
+					return {
+						id: docSnap.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						resolvedImageUrl,
+					} as Product & { resolvedImageUrl: string };
+				}),
+			);
 		} catch (error) {
 			console.error('Error loading products:', error);
 		} finally {
@@ -59,6 +67,30 @@
 
 	const formatDate = (date: Date) => {
 		return date.toLocaleDateString('es-CO');
+	};
+
+	// Function to handle image loading errors
+	const handleImageError = (event: Event, product: Product) => {
+		const img = event.target as HTMLImageElement;
+		img.style.display = 'none';
+
+		// Create a fallback element
+		const fallback = document.createElement('div');
+		fallback.className = 'product-image-fallback';
+		fallback.textContent = getFallbackImage(product.type);
+		fallback.style.cssText = `
+			width: 40px;
+			height: 40px;
+			border-radius: 8px;
+			background: linear-gradient(135deg, #e6f7f8 0%, #b3e8ec 100%);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 20px;
+			border: 2px solid #e5e7eb;
+		`;
+
+		img.parentNode?.insertBefore(fallback, img);
 	};
 
 	$: filteredProducts = products.filter(
@@ -149,9 +181,10 @@
 							<td>
 								<div class="product-info">
 									<img
-										src={product.imageUrl || ''}
+										src={product.resolvedImageUrl}
 										alt={product.name}
 										class="product-image"
+										on:error={(event) => handleImageError(event, product)}
 									/>
 									<div>
 										<div class="product-name">{product.name}</div>
@@ -436,6 +469,18 @@
 		height: 40px;
 		border-radius: 8px;
 		object-fit: cover;
+	}
+
+	.product-image-fallback {
+		width: 40px;
+		height: 40px;
+		border-radius: 8px;
+		background: linear-gradient(135deg, #e6f7f8 0%, #b3e8ec 100%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		border: 2px solid #e5e7eb;
 	}
 
 	.product-name {
