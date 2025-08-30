@@ -11,6 +11,7 @@
 	let isAuthenticated = false;
 	let currentUser: any = null;
 	let isLoading = true;
+	let isSidebarOpen = false;
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -47,11 +48,20 @@
 		await signOut(auth);
 		goto('/');
 	};
+
+	const toggleSidebar = () => {
+		isSidebarOpen = !isSidebarOpen;
+	};
+
+	const closeSidebar = () => {
+		isSidebarOpen = false;
+	};
 </script>
 
 <svelte:head>
 	<title>VAQ+ Admin | Panel de Control</title>
 	<meta name="description" content="Firebase database management interface for VAQ+ mobile app" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </svelte:head>
 
 {#if isLoading}
@@ -61,8 +71,15 @@
 	</div>
 {:else if isAuthenticated}
 	<div class="admin-layout">
+		<!-- Mobile Menu Toggle -->
+		<button class="mobile-menu-toggle" on:click={toggleSidebar} aria-label="Toggle menu">
+			<svg viewBox="0 0 24 24" class="menu-icon">
+				<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+			</svg>
+		</button>
+
 		<!-- Sidebar Navigation -->
-		<nav class="sidebar">
+		<nav class="sidebar" class:open={isSidebarOpen}>
 			<div class="sidebar-header">
 				<div class="sidebar-logo">
 					<img src="/images/logo.png" alt="VAQ+ Logo" class="logo-image" />
@@ -71,6 +88,13 @@
 						<p>Panel de Administración</p>
 					</div>
 				</div>
+				<button class="sidebar-close" on:click={closeSidebar} aria-label="Close menu">
+					<svg viewBox="0 0 24 24">
+						<path
+							d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+						/>
+					</svg>
+				</button>
 			</div>
 
 			<ul class="nav-menu">
@@ -79,6 +103,7 @@
 						href="/dashboard"
 						class="nav-link"
 						class:active={$page.url.pathname === '/dashboard'}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -94,6 +119,7 @@
 						href="/products"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/products')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -109,6 +135,7 @@
 						href="/appointments"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/appointments')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -124,6 +151,7 @@
 						href="/users"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/users')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -139,6 +167,7 @@
 						href="/pediatricians"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/pediatricians')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -154,6 +183,7 @@
 						href="/articles"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/articles')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -169,6 +199,7 @@
 						href="/locations"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/locations')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -184,6 +215,7 @@
 						href="/analytics"
 						class="nav-link"
 						class:active={$page.url.pathname.startsWith('/analytics')}
+						on:click={closeSidebar}
 					>
 						<svg class="nav-icon" viewBox="0 0 24 24">
 							<path
@@ -206,6 +238,11 @@
 				</button>
 			</div>
 		</nav>
+
+		<!-- Overlay for mobile -->
+		{#if isSidebarOpen}
+			<div class="sidebar-overlay" on:click={closeSidebar} />
+		{/if}
 
 		<!-- Main Content -->
 		<main class="main-content">
@@ -251,8 +288,38 @@
 		display: flex;
 		min-height: 100vh;
 		background-color: var(--surface-50);
+		position: relative;
 	}
 
+	/* Mobile Menu Toggle */
+	.mobile-menu-toggle {
+		display: none;
+		position: fixed;
+		top: 1rem;
+		left: 1rem;
+		z-index: 1001;
+		background: var(--primary-600);
+		color: white;
+		border: none;
+		border-radius: 8px;
+		padding: 0.75rem;
+		cursor: pointer;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		transition: all 0.3s ease;
+	}
+
+	.mobile-menu-toggle:hover {
+		background: var(--primary-700);
+		transform: translateY(-2px);
+	}
+
+	.menu-icon {
+		width: 24px;
+		height: 24px;
+		fill: currentColor;
+	}
+
+	/* Sidebar */
 	.sidebar {
 		width: 280px;
 		background: linear-gradient(180deg, var(--primary-600) 0%, var(--primary-700) 100%);
@@ -260,11 +327,39 @@
 		display: flex;
 		flex-direction: column;
 		box-shadow: var(--shadow-lg);
+		position: fixed;
+		height: 100vh;
+		z-index: 1000;
+		transition: transform 0.3s ease;
 	}
 
 	.sidebar-header {
 		padding: 2rem 1.5rem;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.sidebar-close {
+		display: none;
+		background: none;
+		border: none;
+		color: white;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+	}
+
+	.sidebar-close:hover {
+		background-color: rgba(255, 255, 255, 0.1);
+	}
+
+	.sidebar-close svg {
+		width: 24px;
+		height: 24px;
+		fill: currentColor;
 	}
 
 	.sidebar-logo {
@@ -356,30 +451,93 @@
 		fill: #fff5f5;
 	}
 
+	/* Sidebar Overlay */
+	.sidebar-overlay {
+		display: none;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 999;
+	}
+
 	.main-content {
 		flex: 1;
 		padding: 2rem;
 		overflow-y: auto;
+		margin-left: 280px;
+		transition: margin-left 0.3s ease;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 1024px) {
+		.sidebar {
+			width: 240px;
+		}
+
+		.main-content {
+			margin-left: 240px;
+		}
 	}
 
 	@media (max-width: 768px) {
+		.mobile-menu-toggle {
+			display: block;
+		}
+
 		.sidebar {
 			width: 100%;
-			position: fixed;
-			top: 0;
-			left: 0;
-			height: 100vh;
-			z-index: 1000;
 			transform: translateX(-100%);
-			transition: transform 0.3s ease;
 		}
 
 		.sidebar.open {
 			transform: translateX(0);
 		}
 
+		.sidebar-close {
+			display: block;
+		}
+
+		.sidebar-overlay {
+			display: block;
+		}
+
 		.main-content {
+			margin-left: 0;
 			padding: 1rem;
+			padding-top: 5rem; /* Space for mobile menu toggle */
+		}
+
+		.logo-text h1 {
+			font-size: 1.25rem;
+		}
+
+		.logo-text p {
+			font-size: 0.75rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.main-content {
+			padding: 0.75rem;
+			padding-top: 4.5rem;
+		}
+
+		.sidebar-header {
+			padding: 1.5rem 1rem;
+		}
+
+		.nav-link {
+			padding: 0.875rem 1rem;
+			font-size: 0.875rem;
+		}
+
+		.nav-icon {
+			width: 18px;
+			height: 18px;
+			margin-right: 10px;
 		}
 	}
 </style>

@@ -1,5 +1,34 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+
+	let isMobileMenuOpen = false;
+
+	const toggleMobileMenu = () => {
+		isMobileMenuOpen = !isMobileMenuOpen;
+	};
+
+	const closeMobileMenu = () => {
+		isMobileMenuOpen = false;
+	};
+
+	// Close mobile menu when clicking on a link
+	const handleNavClick = () => {
+		closeMobileMenu();
+	};
+
+	// Close mobile menu when clicking outside
+	onMount(() => {
+		const handleClickOutside = (event: Event) => {
+			const target = event.target as HTMLElement;
+			if (!target.closest('.header-nav') && !target.closest('.mobile-menu-toggle')) {
+				closeMobileMenu();
+			}
+		};
+
+		document.addEventListener('click', handleClickOutside);
+		return () => document.removeEventListener('click', handleClickOutside);
+	});
 </script>
 
 <svelte:head>
@@ -8,6 +37,7 @@
 		name="description"
 		content="VAQ+ es la plataforma líder en vacunación y cuidado pediátrico. Conectamos familias con los mejores especialistas."
 	/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </svelte:head>
 
 <!-- Landing Page for Non-Authenticated Users -->
@@ -22,11 +52,19 @@
 					<p>Vacunación y Cuidado Pediátrico</p>
 				</div>
 			</div>
-			<nav class="header-nav">
-				<a href="#features" class="nav-link">Características</a>
-				<a href="#products" class="nav-link">Productos</a>
-				<a href="#about" class="nav-link">Acerca de</a>
-				<a href="#contact" class="nav-link">Contacto</a>
+
+			<!-- Mobile Menu Toggle -->
+			<button class="mobile-menu-toggle" on:click={toggleMobileMenu} aria-label="Toggle menu">
+				<svg viewBox="0 0 24 24" class="menu-icon">
+					<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+				</svg>
+			</button>
+
+			<nav class="header-nav" class:open={isMobileMenuOpen}>
+				<a href="#features" class="nav-link" on:click={handleNavClick}>Características</a>
+				<a href="#products" class="nav-link" on:click={handleNavClick}>Productos</a>
+				<a href="#about" class="nav-link" on:click={handleNavClick}>Acerca de</a>
+				<a href="#contact" class="nav-link" on:click={handleNavClick}>Contacto</a>
 				<button class="login-btn" on:click={() => goto('/login')}> Iniciar Sesión </button>
 			</nav>
 		</div>
@@ -336,10 +374,32 @@
 		color: #6b7280;
 	}
 
+	/* Mobile Menu Toggle */
+	.mobile-menu-toggle {
+		display: none;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+	}
+
+	.mobile-menu-toggle:hover {
+		background-color: #f3f4f6;
+	}
+
+	.menu-icon {
+		width: 24px;
+		height: 24px;
+		fill: #374151;
+	}
+
 	.header-nav {
 		display: flex;
 		gap: 2rem;
 		margin-left: 2rem;
+		align-items: center;
 	}
 
 	.nav-link {
@@ -780,6 +840,7 @@
 		margin: 0;
 	}
 
+	/* Responsive Design */
 	@media (max-width: 1024px) {
 		.hero-container {
 			flex-direction: column;
@@ -842,14 +903,51 @@
 	}
 
 	@media (max-width: 768px) {
+		section {
+			padding-inline: 0.8rem !important;
+		}
+
+		.mobile-menu-toggle {
+			display: block;
+		}
+
 		.header-nav {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			background: white;
 			flex-direction: column;
-			gap: 0.5rem;
-			margin-left: 0;
+			gap: 0;
+			margin: 0;
+			padding: 1rem;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			transform: translateY(-100%);
+			opacity: 0;
+			visibility: hidden;
+			transition: all 0.3s ease;
+		}
+
+		.header-nav.open {
+			transform: translateY(0);
+			opacity: 1;
+			visibility: visible;
 		}
 
 		.nav-link {
-			font-size: 0.85rem;
+			padding: 0.75rem 0;
+			border-bottom: 1px solid #f3f4f6;
+			width: 100%;
+			text-align: center;
+		}
+
+		.nav-link:last-child {
+			border-bottom: none;
+		}
+
+		.login-btn {
+			width: 100%;
+			margin-top: 0.5rem;
 		}
 
 		.hero-title {
@@ -926,6 +1024,61 @@
 
 		.footer-section a {
 			font-size: 0.8rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.landing-page {
+			padding-top: 70px;
+		}
+
+		.header-container {
+			padding: 0 1rem;
+		}
+
+		.logo-text h1 {
+			font-size: 1.5rem;
+			display: none;
+		}
+
+		.logo-text p {
+			font-size: 0.8rem;
+			display: none;
+		}
+
+		.hero-section {
+			padding: 2rem 0;
+		}
+
+		.hero-title {
+			font-size: 2rem;
+		}
+
+		.hero-subtitle {
+			font-size: 0.9rem;
+		}
+
+		.hero-image-container,
+		.about-image-container {
+			width: 250px;
+			height: 250px;
+		}
+
+		.section-header h2 {
+			font-size: 2rem;
+		}
+
+		.section-header p {
+			font-size: 1rem;
+		}
+
+		.feature-card,
+		.product-category {
+			padding: 1.5rem;
+		}
+
+		.contact-form {
+			padding: 1.5rem;
 		}
 	}
 </style>

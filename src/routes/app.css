@@ -1846,7 +1846,6 @@ a:hover {
 @media (max-width: 768px) {
     .header-container {
         padding: var(--spacing-4);
-        flex-direction: column;
         gap: var(--spacing-4);
     }
 

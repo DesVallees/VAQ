@@ -344,5 +344,9 @@
 			margin: 1rem;
 			padding: 2rem;
 		}
+
+		.login-container {
+			padding: 0.5rem;
+		}
 	}
 </style>
