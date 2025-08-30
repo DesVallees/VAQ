@@ -50,7 +50,7 @@
 </script>
 
 <svelte:head>
-	<title>VAQ+ Admin Dashboard</title>
+	<title>VAQ+ Admin | Panel de Control</title>
 	<meta name="description" content="Firebase database management interface for VAQ+ mobile app" />
 </svelte:head>
 
@@ -85,7 +85,7 @@
 								d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"
 							/>
 						</svg>
-						Dashboard
+						Panel de Control
 					</a>
 				</li>
 
@@ -190,7 +190,7 @@
 								d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
 							/>
 						</svg>
-						Analytics
+						Métricas
 					</a>
 				</li>
 			</ul>

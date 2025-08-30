@@ -6,6 +6,7 @@
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 	import { onMount } from 'svelte';
+	import { getImageUrl } from '../../../../lib/utils/imageUtils';
 
 	let loading = true;
 	let saving = false;
@@ -20,6 +21,13 @@
 
 	// Available options
 	const articleCategories: ArticleCategory[] = ['education', 'promotion', 'announcement'];
+
+	// Spanish translations for article categories
+	const articleCategoryLabels = {
+		education: 'Educación',
+		promotion: 'Promoción',
+		announcement: 'Anuncio',
+	};
 
 	// Validation
 	let errors: Record<string, string> = {};
@@ -56,7 +64,12 @@
 
 				// Initialize form data
 				formData = { ...article };
-				imagePreview = article.heroImageUrl || null;
+				// Resolve the image URL for preview
+				if (article.heroImageUrl) {
+					imagePreview = await getImageUrl(article.heroImageUrl, 'articles');
+				} else {
+					imagePreview = null;
+				}
 			} else {
 				errorMessage = 'Artículo no encontrado';
 			}
@@ -149,17 +162,17 @@
 				// Delete old image if it exists
 				if (article.heroImageUrl && !article.heroImageUrl.startsWith('data:')) {
 					try {
-						const oldImageRef = ref(storage, article.heroImageUrl);
+						const oldImageRef = ref(storage, `articles/${article.heroImageUrl}`);
 						await deleteObject(oldImageRef);
 					} catch (error) {
 						console.warn('Could not delete old image:', error);
 					}
 				}
 
-				// Upload new image
+				// Upload new image - store only the filename
 				const imageRef = ref(storage, `articles/${Date.now()}_${imageFile.name}`);
-				const uploadResult = await uploadBytes(imageRef, imageFile);
-				formData.heroImageUrl = await getDownloadURL(uploadResult.ref);
+				await uploadBytes(imageRef, imageFile);
+				formData.heroImageUrl = `${Date.now()}_${imageFile.name}`;
 			}
 
 			// Prepare data for Firestore
@@ -301,15 +314,9 @@
 							<label for="category">Categoría *</label>
 							<select id="category" bind:value={formData.category}>
 								{#each articleCategories as category}
-									<option value={category}>
-										{category === 'education'
-											? 'Educación'
-											: category === 'promotion'
-											? 'Promoción'
-											: category === 'announcement'
-											? 'Anuncio'
-											: category}
-									</option>
+									<option value={category}
+										>{articleCategoryLabels[category]}</option
+									>
 								{/each}
 							</select>
 						</div>
@@ -578,6 +585,21 @@
 		transition: border-color 0.2s ease;
 	}
 
+	.form-group select {
+		background-color: white;
+		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+		padding-right: 2.5rem;
+	}
+
+	.form-group select:hover {
+		border-color: var(--color-primary-light);
+	}
+
 	.form-group input:focus,
 	.form-group select:focus,
 	.form-group textarea:focus {
@@ -639,6 +661,8 @@
 	.image-preview {
 		margin-top: 1rem;
 		text-align: center;
+		display: grid;
+		justify-items: center;
 	}
 
 	.image-preview img {

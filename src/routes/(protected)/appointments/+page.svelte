@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Appointment, AppointmentStatus } from '../types';
+	import type { Appointment, AppointmentStatus, AppointmentType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
@@ -95,7 +95,10 @@
 	};
 
 	const formatStatus = (status: AppointmentStatus) => {
-		const statusMap = {
+		// Handle both formats: "scheduled" and "AppointmentStatus.scheduled"
+		const cleanStatus = status.includes('.') ? status.split('.').pop() || status : status;
+
+		const statusMap: Record<string, string> = {
 			scheduled: 'Programada',
 			pending: 'Pendiente',
 			completed: 'Completada',
@@ -104,7 +107,21 @@
 			noShow: 'No asistió',
 			rescheduled: 'Reprogramada',
 		};
-		return statusMap[status] || status;
+		return statusMap[cleanStatus] || cleanStatus;
+	};
+
+	const formatType = (type: AppointmentType) => {
+		// Handle both formats: "packageApplication" and "AppointmentType.packageApplication"
+		const cleanType = type.includes('.') ? type.split('.').pop() || type : type;
+
+		const typeMap: Record<string, string> = {
+			vaccination: 'Vacunación',
+			consultation: 'Consulta',
+			packageApplication: 'Aplicación de Paquete',
+			checkup: 'Revisión',
+			followUp: 'Seguimiento',
+		};
+		return typeMap[cleanType] || cleanType;
 	};
 
 	const getStatusColor = (status: AppointmentStatus) => {
@@ -288,7 +305,9 @@
 							</td>
 							<td>
 								<div class="reason-info">
-									<div class="appointment-type">{appointment.type}</div>
+									<div class="appointment-type">
+										{formatType(appointment.type)}
+									</div>
 									{#if appointment.notes}
 										<div class="appointment-notes">{appointment.notes}</div>
 									{/if}
@@ -465,7 +484,7 @@
 							</div>
 							<div class="detail-item">
 								<label>Tipo:</label>
-								<span>{selectedAppointment.type}</span>
+								<span>{formatType(selectedAppointment.type)}</span>
 							</div>
 							<div class="detail-item">
 								<label>Estado:</label>

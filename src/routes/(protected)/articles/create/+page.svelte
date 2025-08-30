@@ -26,6 +26,13 @@
 	// Available options
 	const articleCategories: ArticleCategory[] = ['education', 'promotion', 'announcement'];
 
+	// Spanish translations for article categories
+	const articleCategoryLabels = {
+		education: 'Educación',
+		promotion: 'Promoción',
+		announcement: 'Anuncio',
+	};
+
 	// Validation
 	let errors: Record<string, string> = {};
 
@@ -99,8 +106,8 @@
 			// Upload image if selected
 			if (imageFile) {
 				const imageRef = ref(storage, `articles/${Date.now()}_${imageFile.name}`);
-				const uploadResult = await uploadBytes(imageRef, imageFile);
-				formData.heroImageUrl = await getDownloadURL(uploadResult.ref);
+				await uploadBytes(imageRef, imageFile);
+				formData.heroImageUrl = `${Date.now()}_${imageFile.name}`;
 			}
 
 			// Prepare data for Firestore
@@ -184,9 +191,7 @@
 						<label for="category">Categoría *</label>
 						<select id="category" bind:value={formData.category}>
 							{#each articleCategories as category}
-								<option value={category}
-									>{category.charAt(0).toUpperCase() + category.slice(1)}</option
-								>
+								<option value={category}>{articleCategoryLabels[category]}</option>
 							{/each}
 						</select>
 					</div>
@@ -431,6 +436,21 @@
 		border-radius: var(--border-radius);
 		font-size: 1rem;
 		transition: border-color 0.2s ease;
+	}
+
+	.form-group select {
+		background-color: white;
+		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+		padding-right: 2.5rem;
+	}
+
+	.form-group select:hover {
+		border-color: var(--color-primary-light);
 	}
 
 	.form-group input:focus,

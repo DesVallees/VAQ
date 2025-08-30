@@ -60,6 +60,15 @@
 		'checkup',
 		'followUp',
 	];
+
+	// Spanish translations for appointment types
+	const appointmentTypeLabels: Record<string, string> = {
+		vaccination: 'Vacunación',
+		consultation: 'Consulta',
+		packageApplication: 'Aplicación de Paquete',
+		checkup: 'Revisión',
+		followUp: 'Seguimiento',
+	};
 	const appointmentStatuses: AppointmentStatus[] = [
 		'scheduled',
 		'pending',
@@ -69,6 +78,17 @@
 		'noShow',
 		'rescheduled',
 	];
+
+	// Spanish translations for appointment statuses
+	const appointmentStatusLabels: Record<string, string> = {
+		scheduled: 'Programada',
+		pending: 'Pendiente',
+		completed: 'Completada',
+		cancelledByClinic: 'Cancelada por Clínica',
+		cancelledByUser: 'Cancelada por Usuario',
+		noShow: 'No asistió',
+		rescheduled: 'Reprogramada',
+	};
 	const durationOptions = [15, 30, 45, 60, 90, 120];
 
 	// Validation
@@ -393,19 +413,7 @@
 						<label for="type">Tipo de Cita *</label>
 						<select id="type" bind:value={formData.type}>
 							{#each appointmentTypes as type}
-								<option value={type}>
-									{type === 'vaccination'
-										? 'Vacunación'
-										: type === 'consultation'
-										? 'Consulta'
-										: type === 'packageApplication'
-										? 'Aplicación de Paquete'
-										: type === 'checkup'
-										? 'Revisión'
-										: type === 'followUp'
-										? 'Seguimiento'
-										: type}
-								</option>
+								<option value={type}>{appointmentTypeLabels[type]}</option>
 							{/each}
 						</select>
 					</div>
@@ -414,23 +422,7 @@
 						<label for="status">Estado</label>
 						<select id="status" bind:value={formData.status}>
 							{#each appointmentStatuses as status}
-								<option value={status}>
-									{status === 'scheduled'
-										? 'Programada'
-										: status === 'pending'
-										? 'Pendiente'
-										: status === 'completed'
-										? 'Completada'
-										: status === 'cancelledByUser'
-										? 'Cancelada por Usuario'
-										: status === 'cancelledByClinic'
-										? 'Cancelada por Clínica'
-										: status === 'noShow'
-										? 'No Presentó'
-										: status === 'rescheduled'
-										? 'Reprogramada'
-										: status}
-								</option>
+								<option value={status}>{appointmentStatusLabels[status]}</option>
 							{/each}
 						</select>
 					</div>
@@ -636,6 +628,21 @@
 		border-radius: var(--border-radius);
 		font-size: 1rem;
 		transition: border-color 0.2s ease;
+	}
+
+	.form-group select {
+		background-color: white;
+		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+		padding-right: 2.5rem;
+	}
+
+	.form-group select:hover {
+		border-color: var(--color-primary-light);
 	}
 
 	.form-group input:focus,

@@ -3,13 +3,13 @@
 	import type { Article, ArticleCategory } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
-	import { getProductImageURL, getFallbackImage } from '../../lib/utils/imageUtils';
+	import { getImageUrl, getFallbackImage } from '../../lib/utils/imageUtils';
 
-	let articles: Article[] = [];
+	let articles: (Article & { resolvedImageUrl: string })[] = [];
 	let loading = true;
 	let searchTerm = '';
 	let categoryFilter: ArticleCategory | 'all' = 'all';
-	let selectedArticle: Article | null = null;
+	let selectedArticle: (Article & { resolvedImageUrl: string }) | null = null;
 	let showDetails = false;
 
 	onMount(async () => {
@@ -20,12 +20,19 @@
 		loading = true;
 		try {
 			const articlesSnapshot = await getDocs(collection(db, 'articles'));
-			articles = articlesSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				publishedAt: doc.data().publishedAt?.toDate() || null,
-			})) as Article[];
+			articles = await Promise.all(
+				articlesSnapshot.docs.map(async (doc) => {
+					const data = doc.data();
+					const resolvedImageUrl = await getImageUrl(data.heroImageUrl, 'articles');
+					return {
+						id: doc.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						publishedAt: data.publishedAt?.toDate() || null,
+						resolvedImageUrl,
+					} as Article & { resolvedImageUrl: string };
+				}),
+			);
 		} catch (error) {
 			console.error('Error loading articles:', error);
 		} finally {
@@ -45,7 +52,7 @@
 		}
 	};
 
-	const openDetails = (article: Article) => {
+	const openDetails = (article: Article & { resolvedImageUrl: string }) => {
 		selectedArticle = article;
 		showDetails = true;
 	};
@@ -218,9 +225,9 @@
 							<td>
 								<div class="article-info">
 									<div class="article-image">
-										{#if article.heroImageUrl}
+										{#if article.resolvedImageUrl}
 											<img
-												src={getProductImageURL(article.heroImageUrl)}
+												src={article.resolvedImageUrl}
 												alt="Imagen destacada"
 												on:error={(event) =>
 													handleImageError(event, article)}
@@ -443,7 +450,7 @@
 							<h3>Imagen Destacada</h3>
 							<div class="detail-item full-width">
 								<img
-									src={getProductImageURL(selectedArticle.heroImageUrl)}
+									src={selectedArticle.resolvedImageUrl}
 									alt="Imagen destacada"
 									class="featured-image"
 									on:error={(event) =>

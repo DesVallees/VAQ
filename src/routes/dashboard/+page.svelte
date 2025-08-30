@@ -75,7 +75,7 @@
 			await loadDashboardData();
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			error = `Error al cargar los datos del dashboard: ${message}`;
+			error = `Error al cargar los datos del panel de control: ${message}`;
 			dbe('Dashboard error:', err);
 		} finally {
 			isLoading = false;
@@ -201,7 +201,7 @@
 				: '';
 			dbe(`${LABEL}: failed${section}`, err);
 			const message = err instanceof Error ? err.message : String(err);
-			error = `Error al cargar los datos del dashboard${section}: ${message}`;
+			error = `Error al cargar los datos del panel de control ${section}: ${message}`;
 			throw err; // Let caller know
 		} finally {
 			timeEnd(LABEL);
@@ -224,14 +224,17 @@
 			dbg(`${apptLabel}: snapshot size=${recentAppointments.size}`);
 			recentAppointments.forEach((doc) => {
 				const data = doc.data();
+				console.log('data', data);
 				try {
 					activities.push({
 						id: doc.id,
 						type: 'appointment',
 						title: `Cita: ${data.patientName || 'Paciente'}`,
-						description: `Dr. ${data.doctorName || 'Médico'} - ${data.type}`,
+						description: `${
+							data.locationName || 'Ubicación desconocida'
+						} - ${formatAppointmentType(data.type)}`,
 						timestamp: data.createdAt?.toDate?.() || new Date(),
-						status: data.status,
+						status: formatAppointmentStatus(data.status),
 					});
 				} catch (e) {
 					dbe(`${apptLabel}: mapping error for doc ${doc.id}`, e);
@@ -312,10 +315,40 @@
 				return '📋';
 		}
 	};
+
+	const formatAppointmentType = (type: string) => {
+		// Handle both formats: "packageApplication" and "AppointmentType.packageApplication"
+		const cleanType = type.includes('.') ? type.split('.').pop() || type : type;
+
+		const typeMap: Record<string, string> = {
+			vaccination: 'Vacunación',
+			consultation: 'Consulta',
+			packageApplication: 'Aplicación de Paquete',
+			checkup: 'Revisión',
+			followUp: 'Seguimiento',
+		};
+		return typeMap[cleanType] || cleanType;
+	};
+
+	const formatAppointmentStatus = (status: string) => {
+		// Handle both formats: "scheduled" and "AppointmentStatus.scheduled"
+		const cleanStatus = status.includes('.') ? status.split('.').pop() || status : status;
+
+		const statusMap: Record<string, string> = {
+			scheduled: 'Programada',
+			pending: 'Pendiente',
+			completed: 'Completada',
+			cancelledByUser: 'Cancelada por Usuario',
+			cancelledByClinic: 'Cancelada por Clínica',
+			noShow: 'No asistió',
+			rescheduled: 'Reprogramada',
+		};
+		return statusMap[cleanStatus] || cleanStatus;
+	};
 </script>
 
 <svelte:head>
-	<title>VAQ+ Admin - Dashboard</title>
+	<title>VAQ+ Admin - Panel de Control</title>
 </svelte:head>
 
 <div class="dashboard">
@@ -323,7 +356,7 @@
 		<div class="header-logo">
 			<img src="/images/logo.png" alt="VAQ+ Logo" class="header-logo-image" />
 			<div class="header-text">
-				<h1>Dashboard</h1>
+				<h1>Panel de Control</h1>
 				<p class="subtitle">Resumen general del sistema VAQ+</p>
 			</div>
 		</div>

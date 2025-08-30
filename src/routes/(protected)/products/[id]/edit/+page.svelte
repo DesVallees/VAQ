@@ -6,6 +6,7 @@
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 	import { onMount } from 'svelte';
+	import { getImageUrl } from '../../../../lib/utils/imageUtils';
 
 	let loading = true;
 	let saving = false;
@@ -20,6 +21,13 @@
 
 	// Available options
 	const productTypes: ProductType[] = ['vaccine', 'bundle', 'package'];
+
+	// Spanish translations for product types
+	const productTypeLabels = {
+		vaccine: 'Vacuna',
+		bundle: 'Paquete',
+		package: 'Programa',
+	};
 
 	// Validation
 	let errors: Record<string, string> = {};
@@ -68,7 +76,12 @@
 
 				// Initialize form data
 				formData = { ...product };
-				imagePreview = product.imageUrl || null;
+				// Resolve the image URL for preview
+				if (product.imageUrl) {
+					imagePreview = await getImageUrl(product.imageUrl, product.type);
+				} else {
+					imagePreview = null;
+				}
 			} else {
 				errorMessage = 'Producto no encontrado';
 			}
@@ -163,17 +176,17 @@
 				// Delete old image if it exists
 				if (product.imageUrl && !product.imageUrl.startsWith('data:')) {
 					try {
-						const oldImageRef = ref(storage, product.imageUrl);
+						const oldImageRef = ref(storage, `products/${product.imageUrl}`);
 						await deleteObject(oldImageRef);
 					} catch (error) {
 						console.warn('Could not delete old image:', error);
 					}
 				}
 
-				// Upload new image
+				// Upload new image - store only the filename
 				const imageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
-				const uploadResult = await uploadBytes(imageRef, imageFile);
-				formData.imageUrl = await getDownloadURL(uploadResult.ref);
+				await uploadBytes(imageRef, imageFile);
+				formData.imageUrl = `${Date.now()}_${imageFile.name}`;
 			}
 
 			// Prepare data for Firestore
@@ -225,7 +238,7 @@
 			// Delete image from storage if it exists
 			if (product.imageUrl && !product.imageUrl.startsWith('data:')) {
 				try {
-					const imageRef = ref(storage, product.imageUrl);
+					const imageRef = ref(storage, `products/${product.imageUrl}`);
 					await deleteObject(imageRef);
 				} catch (error) {
 					console.warn('Could not delete image:', error);
@@ -305,9 +318,7 @@
 							<label for="type">Tipo de Producto *</label>
 							<select id="type" bind:value={formData.type}>
 								{#each productTypes as type}
-									<option value={type}
-										>{type.charAt(0).toUpperCase() + type.slice(1)}</option
-									>
+									<option value={type}>{productTypeLabels[type]}</option>
 								{/each}
 							</select>
 						</div>
@@ -713,6 +724,21 @@
 		transition: border-color 0.2s ease;
 	}
 
+	.form-group select {
+		background-color: white;
+		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+		padding-right: 2.5rem;
+	}
+
+	.form-group select:hover {
+		border-color: var(--color-primary-light);
+	}
+
 	.form-group input:focus,
 	.form-group select:focus,
 	.form-group textarea:focus {
@@ -773,6 +799,8 @@
 	.image-preview {
 		margin-top: 1rem;
 		text-align: center;
+		display: grid;
+		justify-items: center;
 	}
 
 	.image-preview img {

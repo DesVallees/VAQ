@@ -255,8 +255,8 @@
 			<div class="header-logo">
 				<img src="/images/logo.png" alt="VAQ+ Logo" class="header-logo-image" />
 				<div class="header-text">
-					<h1>Analytics y Reportes</h1>
-					<p>Métricas y análisis del sistema VAQ+</p>
+					<h1>Métricas y Reportes</h1>
+					<p>Estadísticas y análisis del sistema VAQ+</p>
 				</div>
 			</div>
 		</div>
@@ -265,7 +265,7 @@
 	{#if loading}
 		<div class="loading-state">
 			<div class="spinner" />
-			<p>Cargando datos de analytics...</p>
+			<p>Cargando datos...</p>
 		</div>
 	{:else}
 		<!-- Key Metrics Cards -->

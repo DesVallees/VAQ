@@ -60,7 +60,7 @@
 		const typeMap = {
 			vaccine: 'Vacuna',
 			bundle: 'Paquete',
-			package: 'Paquete',
+			package: 'Programa',
 		};
 		return typeMap[type] || type;
 	};
