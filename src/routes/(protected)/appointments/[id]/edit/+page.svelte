@@ -17,9 +17,6 @@
 		updateDoc,
 		serverTimestamp,
 		getDocs,
-		query,
-		where,
-		orderBy,
 		collection,
 	} from 'firebase/firestore';
 	import { onMount } from 'svelte';
@@ -88,74 +85,93 @@
 
 	const loadFormData = async () => {
 		try {
-			// Load patients (normal users)
-			const patientsSnapshot = await getDocs(
-				query(
-					collection(db, 'users'),
-					where('userType', '==', 'normal'),
-					orderBy('displayName'),
-				),
-			);
-			patients = patientsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
-			})) as User[];
-
-			// Load pediatricians
-			const pediatriciansSnapshot = await getDocs(
-				query(collection(db, 'pediatricians'), orderBy('displayName')),
-			);
-			pediatricians = pediatriciansSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
-			})) as Pediatrician[];
-
-			// Load locations
-			const locationsSnapshot = await getDocs(
-				query(collection(db, 'locations'), orderBy('name')),
-			);
-			locations = locationsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-			})) as Location[];
-
-			// Load products
-			const productsSnapshot = await getDocs(
-				query(collection(db, 'products'), orderBy('name')),
-			);
-			products = productsSnapshot.docs.map((doc) => {
-				const data = doc.data();
-				return {
+			// Load patients (normal users) - simplified query to avoid index issues
+			const patientsSnapshot = await getDocs(collection(db, 'users'));
+			patients = patientsSnapshot.docs
+				.filter((doc) => doc.data().userType === 'normal')
+				.sort((a, b) => {
+					const nameA = a.data().displayName || '';
+					const nameB = b.data().displayName || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => ({
 					id: doc.id,
-					type: data.type || 'vaccine',
-					name: data.name || '',
-					commonName: data.commonName || '',
-					description: data.description || '',
-					price: data.price || null,
-					priceAvacunar: data.priceAvacunar || null,
-					priceVita: data.priceVita || null,
-					priceColsanitas: data.priceColsanitas || null,
-					imageUrl: data.imageUrl || '',
-					applicableDoctors: data.applicableDoctors || [],
-					minAge: data.minAge || 0,
-					maxAge: data.maxAge || 18,
-					specialIndications: data.specialIndications || null,
-					manufacturer: data.manufacturer || null,
-					dosageInfo: data.dosageInfo || null,
-					targetDiseases: data.targetDiseases || null,
-					dosesAndBoosters: data.dosesAndBoosters || null,
-					includedProductIds: data.includedProductIds || null,
-					includedDoseBundles: data.includedDoseBundles || null,
-					targetMilestone: data.targetMilestone || null,
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date(),
-				} as Product;
-			});
+					...doc.data(),
+					createdAt: doc.data().createdAt?.toDate() || new Date(),
+					lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
+				})) as User[];
+
+			// Load pediatricians - simplified query to avoid index issues
+			const pediatriciansSnapshot = await getDocs(collection(db, 'pediatricians'));
+			pediatricians = pediatriciansSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().displayName || '';
+					const nameB = b.data().displayName || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						lastLoginAt: data.lastLoginAt?.toDate() || new Date(),
+					} as Pediatrician;
+				});
+
+			// Load locations - simplified query to avoid index issues
+			const locationsSnapshot = await getDocs(collection(db, 'locations'));
+			locations = locationsSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().name || '';
+					const nameB = b.data().name || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+					} as Location;
+				});
+
+			// Load products - simplified query to avoid index issues
+			const productsSnapshot = await getDocs(collection(db, 'products'));
+			products = productsSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().name || '';
+					const nameB = b.data().name || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						type: data.type || 'vaccine',
+						name: data.name || '',
+						commonName: data.commonName || '',
+						description: data.description || '',
+						price: data.price || null,
+						priceAvacunar: data.priceAvacunar || null,
+						priceVita: data.priceVita || null,
+						priceColsanitas: data.priceColsanitas || null,
+						imageUrl: data.imageUrl || '',
+						applicableDoctors: data.applicableDoctors || [],
+						minAge: data.minAge || 0,
+						maxAge: data.maxAge || 18,
+						specialIndications: data.specialIndications || null,
+						manufacturer: data.manufacturer || null,
+						dosageInfo: data.dosageInfo || null,
+						targetDiseases: data.targetDiseases || null,
+						dosesAndBoosters: data.dosesAndBoosters || null,
+						includedProductIds: data.includedProductIds || null,
+						includedDoseBundles: data.includedDoseBundles || null,
+						targetMilestone: data.targetMilestone || null,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						updatedAt: data.updatedAt?.toDate() || new Date(),
+					} as Product;
+				});
 		} catch (error) {
 			console.error('Error loading form data:', error);
 			errorMessage = 'Error al cargar los datos del formulario';
@@ -174,6 +190,87 @@
 			const appointmentDoc = await getDoc(doc(db, 'appointments', appointmentId));
 			if (appointmentDoc.exists()) {
 				const data = appointmentDoc.data();
+
+				// Handle dateTime field - could be Firestore Timestamp, Date, or string
+				let dateTime: Date;
+				if (data.dateTime) {
+					if (typeof data.dateTime === 'object' && data.dateTime.toDate) {
+						// Firestore Timestamp
+						dateTime = data.dateTime.toDate();
+					} else if (data.dateTime instanceof Date) {
+						// Already a Date object
+						dateTime = data.dateTime;
+					} else if (typeof data.dateTime === 'string') {
+						// String date - try to parse it
+						dateTime = new Date(data.dateTime);
+					} else if (typeof data.dateTime === 'number') {
+						// Unix timestamp
+						dateTime = new Date(data.dateTime);
+					} else {
+						// Fallback to current date
+						console.warn(
+							'Invalid dateTime format for appointment:',
+							appointmentId,
+							data.dateTime,
+						);
+						dateTime = new Date();
+					}
+				} else {
+					dateTime = new Date();
+				}
+
+				// Handle other date fields similarly
+				let createdAt: Date;
+				if (data.createdAt) {
+					if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
+						createdAt = data.createdAt.toDate();
+					} else if (data.createdAt instanceof Date) {
+						createdAt = data.createdAt;
+					} else if (typeof data.createdAt === 'string') {
+						createdAt = new Date(data.createdAt);
+					} else if (typeof data.createdAt === 'number') {
+						createdAt = new Date(data.createdAt);
+					} else {
+						createdAt = new Date();
+					}
+				} else {
+					createdAt = new Date();
+				}
+
+				let updatedAt: Date;
+				if (data.updatedAt) {
+					if (typeof data.updatedAt === 'object' && data.updatedAt.toDate) {
+						updatedAt = data.updatedAt.toDate();
+					} else if (data.updatedAt instanceof Date) {
+						updatedAt = data.updatedAt;
+					} else if (typeof data.updatedAt === 'string') {
+						updatedAt = new Date(data.updatedAt);
+					} else if (typeof data.updatedAt === 'number') {
+						updatedAt = new Date(data.updatedAt);
+					} else {
+						updatedAt = new Date();
+					}
+				} else {
+					updatedAt = new Date();
+				}
+
+				let lastUpdatedAt: Date;
+				if (data.lastUpdatedAt) {
+					if (typeof data.lastUpdatedAt === 'object' && data.lastUpdatedAt.toDate) {
+						lastUpdatedAt = data.lastUpdatedAt.toDate();
+					} else if (data.lastUpdatedAt instanceof Date) {
+						lastUpdatedAt = data.lastUpdatedAt;
+					} else if (typeof data.lastUpdatedAt === 'string') {
+						lastUpdatedAt = new Date(data.lastUpdatedAt);
+					} else if (typeof data.lastUpdatedAt === 'number') {
+						lastUpdatedAt = new Date(data.lastUpdatedAt);
+					} else {
+						lastUpdatedAt = new Date();
+					}
+				} else {
+					lastUpdatedAt = new Date();
+				}
+
 				appointment = {
 					id: appointmentDoc.id,
 					patientId: data.patientId || '',
@@ -181,7 +278,7 @@
 					doctorId: data.doctorId || '',
 					doctorName: data.doctorName || '',
 					doctorSpecialty: data.doctorSpecialty || '',
-					dateTime: data.dateTime?.toDate() || new Date(),
+					dateTime,
 					durationMinutes: data.durationMinutes || 30,
 					locationId: data.locationId || '',
 					locationName: data.locationName || '',
@@ -190,9 +287,9 @@
 					productIds: data.productIds || [],
 					status: data.status || 'scheduled',
 					notes: data.notes || '',
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date(),
-					lastUpdatedAt: data.lastUpdatedAt?.toDate() || new Date(),
+					createdAt,
+					updatedAt,
+					lastUpdatedAt,
 					createdByUserId: data.createdByUserId || '',
 				} as Appointment;
 

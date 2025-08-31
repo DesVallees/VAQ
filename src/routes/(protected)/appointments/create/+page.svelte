@@ -10,15 +10,7 @@
 		Product,
 	} from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import {
-		collection,
-		addDoc,
-		serverTimestamp,
-		getDocs,
-		query,
-		where,
-		orderBy,
-	} from 'firebase/firestore';
+	import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 	import { onMount } from 'svelte';
 
 	let loading = false;
@@ -100,74 +92,93 @@
 
 	const loadFormData = async () => {
 		try {
-			// Load patients (normal users)
-			const patientsSnapshot = await getDocs(
-				query(
-					collection(db, 'users'),
-					where('userType', '==', 'normal'),
-					orderBy('displayName'),
-				),
-			);
-			patients = patientsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
-			})) as User[];
-
-			// Load pediatricians
-			const pediatriciansSnapshot = await getDocs(
-				query(collection(db, 'pediatricians'), orderBy('displayName')),
-			);
-			pediatricians = pediatriciansSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
-			})) as Pediatrician[];
-
-			// Load locations
-			const locationsSnapshot = await getDocs(
-				query(collection(db, 'locations'), orderBy('name')),
-			);
-			locations = locationsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-			})) as Location[];
-
-			// Load products
-			const productsSnapshot = await getDocs(
-				query(collection(db, 'products'), orderBy('name')),
-			);
-			products = productsSnapshot.docs.map((doc) => {
-				const data = doc.data();
-				return {
+			// Load patients (normal users) - simplified query to avoid index issues
+			const patientsSnapshot = await getDocs(collection(db, 'users'));
+			patients = patientsSnapshot.docs
+				.filter((doc) => doc.data().userType === 'normal')
+				.sort((a, b) => {
+					const nameA = a.data().displayName || '';
+					const nameB = b.data().displayName || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => ({
 					id: doc.id,
-					type: data.type || 'vaccine',
-					name: data.name || '',
-					commonName: data.commonName || '',
-					description: data.description || '',
-					price: data.price || null,
-					priceAvacunar: data.priceAvacunar || null,
-					priceVita: data.priceVita || null,
-					priceColsanitas: data.priceColsanitas || null,
-					imageUrl: data.imageUrl || '',
-					applicableDoctors: data.applicableDoctors || [],
-					minAge: data.minAge || 0,
-					maxAge: data.maxAge || 18,
-					specialIndications: data.specialIndications || null,
-					manufacturer: data.manufacturer || null,
-					dosageInfo: data.dosageInfo || null,
-					targetDiseases: data.targetDiseases || null,
-					dosesAndBoosters: data.dosesAndBoosters || null,
-					includedProductIds: data.includedProductIds || null,
-					includedDoseBundles: data.includedDoseBundles || null,
-					targetMilestone: data.targetMilestone || null,
-					createdAt: data.createdAt?.toDate() || new Date(),
-					updatedAt: data.updatedAt?.toDate() || new Date(),
-				} as Product;
-			});
+					...doc.data(),
+					createdAt: doc.data().createdAt?.toDate() || new Date(),
+					lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
+				})) as User[];
+
+			// Load pediatricians - simplified query to avoid index issues
+			const pediatriciansSnapshot = await getDocs(collection(db, 'pediatricians'));
+			pediatricians = pediatriciansSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().displayName || '';
+					const nameB = b.data().displayName || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						lastLoginAt: data.lastLoginAt?.toDate() || new Date(),
+					} as Pediatrician;
+				});
+
+			// Load locations - simplified query to avoid index issues
+			const locationsSnapshot = await getDocs(collection(db, 'locations'));
+			locations = locationsSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().name || '';
+					const nameB = b.data().name || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						...data,
+						createdAt: data.createdAt?.toDate() || new Date(),
+					} as Location;
+				});
+
+			// Load products - simplified query to avoid index issues
+			const productsSnapshot = await getDocs(collection(db, 'products'));
+			products = productsSnapshot.docs
+				.sort((a, b) => {
+					const nameA = a.data().name || '';
+					const nameB = b.data().name || '';
+					return nameA.localeCompare(nameB);
+				})
+				.map((doc) => {
+					const data = doc.data();
+					return {
+						id: doc.id,
+						type: data.type || 'vaccine',
+						name: data.name || '',
+						commonName: data.commonName || '',
+						description: data.description || '',
+						price: data.price || null,
+						priceAvacunar: data.priceAvacunar || null,
+						priceVita: data.priceVita || null,
+						priceColsanitas: data.priceColsanitas || null,
+						imageUrl: data.imageUrl || '',
+						applicableDoctors: data.applicableDoctors || [],
+						minAge: data.minAge || 0,
+						maxAge: data.maxAge || 18,
+						specialIndications: data.specialIndications || null,
+						manufacturer: data.manufacturer || null,
+						dosageInfo: data.dosageInfo || null,
+						targetDiseases: data.targetDiseases || null,
+						dosesAndBoosters: data.dosesAndBoosters || null,
+						includedProductIds: data.includedProductIds || null,
+						includedDoseBundles: data.includedDoseBundles || null,
+						targetMilestone: data.targetMilestone || null,
+						createdAt: data.createdAt?.toDate() || new Date(),
+						updatedAt: data.updatedAt?.toDate() || new Date(),
+					} as Product;
+				});
 		} catch (error) {
 			console.error('Error loading form data:', error);
 			errorMessage = 'Error al cargar los datos del formulario';

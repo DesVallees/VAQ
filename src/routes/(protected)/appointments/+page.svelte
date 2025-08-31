@@ -22,14 +22,78 @@
 			const appointmentsSnapshot = await getDocs(
 				query(collection(db, 'appointments'), orderBy('dateTime', 'desc')),
 			);
-			appointments = appointmentsSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				dateTime: doc.data().dateTime?.toDate() || new Date(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-			})) as Appointment[];
+
+			appointments = appointmentsSnapshot.docs.map((doc) => {
+				const data = doc.data();
+
+				// Debug logging for the first few documents
+				if (appointmentsSnapshot.docs.indexOf(doc) < 3) {
+					console.log('Document data for appointment', doc.id, ':', {
+						dateTime: data.dateTime,
+						dateTimeType: typeof data.dateTime,
+						dateTimeConstructor: data.dateTime?.constructor?.name,
+						hasToDate: typeof data.dateTime === 'object' && data.dateTime?.toDate,
+						createdAt: data.createdAt,
+						createdAtType: typeof data.createdAt,
+					});
+				}
+
+				// Handle dateTime field - could be Firestore Timestamp, Date, or string
+				let dateTime: Date;
+				if (data.dateTime) {
+					if (typeof data.dateTime === 'object' && data.dateTime.toDate) {
+						// Firestore Timestamp
+						dateTime = data.dateTime.toDate();
+					} else if (data.dateTime instanceof Date) {
+						// Already a Date object
+						dateTime = data.dateTime;
+					} else if (typeof data.dateTime === 'string') {
+						// String date - try to parse it
+						dateTime = new Date(data.dateTime);
+					} else if (typeof data.dateTime === 'number') {
+						// Unix timestamp
+						dateTime = new Date(data.dateTime);
+					} else {
+						// Fallback to current date
+						console.warn(
+							'Invalid dateTime format for appointment:',
+							doc.id,
+							data.dateTime,
+						);
+						dateTime = new Date();
+					}
+				} else {
+					dateTime = new Date();
+				}
+
+				// Handle createdAt field similarly
+				let createdAt: Date;
+				if (data.createdAt) {
+					if (typeof data.createdAt === 'object' && data.createdAt.toDate) {
+						createdAt = data.createdAt.toDate();
+					} else if (data.createdAt instanceof Date) {
+						createdAt = data.createdAt;
+					} else if (typeof data.createdAt === 'string') {
+						createdAt = new Date(data.createdAt);
+					} else if (typeof data.createdAt === 'number') {
+						createdAt = new Date(data.createdAt);
+					} else {
+						createdAt = new Date();
+					}
+				} else {
+					createdAt = new Date();
+				}
+
+				return {
+					id: doc.id,
+					...data,
+					dateTime,
+					createdAt,
+				} as Appointment;
+			});
 		} catch (error) {
-			console.error('Error loading appointments:', error);
+			// Set empty array on error to prevent further issues
+			appointments = [];
 		} finally {
 			loading = false;
 		}
@@ -76,6 +140,10 @@
 	};
 
 	const formatDate = (date: Date) => {
+		// Validate date before formatting
+		if (!(date instanceof Date) || isNaN(date.getTime())) {
+			return 'Fecha inválida';
+		}
 		return date.toLocaleDateString('es-CO', {
 			year: 'numeric',
 			month: 'long',
@@ -84,6 +152,10 @@
 	};
 
 	const formatTime = (date: Date) => {
+		// Validate date before formatting
+		if (!(date instanceof Date) || isNaN(date.getTime())) {
+			return 'Hora inválida';
+		}
 		return date.toLocaleTimeString('es-CO', {
 			hour: '2-digit',
 			minute: '2-digit',
@@ -91,6 +163,10 @@
 	};
 
 	const formatDateTime = (date: Date) => {
+		// Validate date before formatting
+		if (!(date instanceof Date) || isNaN(date.getTime())) {
+			return 'Fecha y hora inválidas';
+		}
 		return `${formatDate(date)} a las ${formatTime(date)}`;
 	};
 
@@ -145,7 +221,7 @@
 	$: filteredAppointments = appointments.filter((appointment) => {
 		const matchesSearch =
 			(appointment.patientName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-			(appointment.doctorName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+			(appointment.locationName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
 			(appointment.notes?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
 		const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
@@ -155,18 +231,27 @@
 			const now = new Date();
 			const appointmentDate = appointment.dateTime;
 
-			switch (dateFilter) {
-				case 'today':
-					matchesDate = appointmentDate.toDateString() === now.toDateString();
-					break;
-				case 'week':
-					const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-					matchesDate = appointmentDate >= weekAgo;
-					break;
-				case 'month':
-					const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-					matchesDate = appointmentDate >= monthAgo;
-					break;
+			// Ensure appointmentDate is a valid Date object
+			if (!(appointmentDate instanceof Date) || isNaN(appointmentDate.getTime())) {
+				matchesDate = false;
+			} else {
+				switch (dateFilter) {
+					case 'today':
+						matchesDate = appointmentDate.toDateString() === now.toDateString();
+						break;
+					case 'week':
+						const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+						matchesDate = appointmentDate >= weekAgo;
+						break;
+					case 'month':
+						const monthAgo = new Date(
+							now.getFullYear(),
+							now.getMonth() - 1,
+							now.getDate(),
+						);
+						matchesDate = appointmentDate >= monthAgo;
+						break;
+				}
 			}
 		}
 
@@ -175,9 +260,13 @@
 
 	// Calculate statistics
 	$: totalAppointments = appointments.length;
-	$: todayAppointments = appointments.filter(
-		(a) => a.dateTime.toDateString() === new Date().toDateString(),
-	).length;
+	$: todayAppointments = appointments.filter((a) => {
+		// Ensure dateTime is a valid Date object
+		if (!(a.dateTime instanceof Date) || isNaN(a.dateTime.getTime())) {
+			return false;
+		}
+		return a.dateTime.toDateString() === new Date().toDateString();
+	}).length;
 	$: pendingAppointments = appointments.filter(
 		(a) => a.status === 'scheduled' || a.status === 'pending',
 	).length;
@@ -207,7 +296,7 @@
 			</svg>
 			<input
 				type="text"
-				placeholder="Buscar citas por paciente, doctor o motivo..."
+				placeholder="Buscar citas por paciente, ubicación o motivo..."
 				bind:value={searchTerm}
 				class="search-input"
 			/>
@@ -266,7 +355,7 @@
 					<thead>
 						<tr>
 							<th class="col-patient">Paciente</th>
-							<th class="col-doctor">Doctor</th>
+							<th class="col-location">Ubicación</th>
 							<th class="col-datetime">Fecha y Hora</th>
 							<th class="col-reason">Motivo</th>
 							<th class="col-status">Estado</th>
@@ -281,16 +370,16 @@
 										<div class="patient-name">
 											{appointment.patientName || 'Sin nombre'}
 										</div>
-										<div class="patient-id">ID: {appointment.patientId}</div>
+										<div class="patient-id">{appointment.patientId}</div>
 									</div>
 								</td>
-								<td class="col-doctor">
-									<div class="doctor-info">
-										<div class="doctor-name">
-											{appointment.doctorName || 'Sin nombre'}
+								<td class="col-location">
+									<div class="location-info">
+										<div class="location-name">
+											{appointment.locationName || 'Sin ubicación'}
 										</div>
-										<div class="doctor-specialty">
-											{appointment.doctorSpecialty || 'Sin especialidad'}
+										<div class="location-address">
+											{appointment.locationAddress || 'Sin dirección'}
 										</div>
 									</div>
 								</td>
@@ -459,17 +548,15 @@
 					</div>
 
 					<div class="detail-section">
-						<h3>Información del Doctor</h3>
+						<h3>Información de la Ubicación</h3>
 						<div class="detail-grid">
 							<div class="detail-item">
-								<label>Nombre:</label>
-								<span>{selectedAppointment.doctorName || 'Sin nombre'}</span>
+								<label>Clínica:</label>
+								<span>{selectedAppointment.locationName || 'Sin nombre'}</span>
 							</div>
 							<div class="detail-item">
-								<label>Especialidad:</label>
-								<span
-									>{selectedAppointment.doctorSpecialty ||
-										'Sin especialidad'}</span
+								<label>Dirección:</label>
+								<span>{selectedAppointment.locationAddress || 'Sin dirección'}</span
 								>
 							</div>
 						</div>
@@ -614,7 +701,7 @@
 	}
 
 	.patient-info,
-	.doctor-info,
+	.location-info,
 	.datetime-info,
 	.reason-info {
 		display: flex;
@@ -623,13 +710,13 @@
 	}
 
 	.patient-name,
-	.doctor-name {
+	.location-name {
 		font-weight: var(--font-weight-semibold);
 		color: var(--neutral-900);
 	}
 
 	.patient-id,
-	.doctor-specialty,
+	.location-address,
 	.appointment-time,
 	.appointment-notes {
 		font-size: var(--font-size-sm);
@@ -854,7 +941,7 @@
 		}
 
 		/* Hide less important columns on mobile */
-		.col-doctor,
+		.col-location,
 		.col-reason {
 			display: none;
 		}
