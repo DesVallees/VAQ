@@ -3,10 +3,20 @@
 	import { page } from '$app/stores';
 	import type { Product, ProductType } from '../../../../types';
 	import { db, storage } from '$lib/firebase/vaqmas';
-	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+	import {
+		doc,
+		getDoc,
+		updateDoc,
+		serverTimestamp,
+		getDocs,
+		collection,
+		query,
+		where,
+	} from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 	import { onMount } from 'svelte';
 	import { getImageUrl } from '../../../../lib/utils/imageUtils';
+	import AutocompleteInput from '../../../../components/AutocompleteInput.svelte';
 
 	let loading = true;
 	let saving = false;
@@ -16,8 +26,39 @@
 	let errorMessage = '';
 	let successMessage = '';
 
-	// Form data
-	let formData: Partial<Product> = {};
+	// Available options for autocomplete
+	let availableDoctors: Array<{ id: string; label: string; description?: string }> = [];
+	let availableProducts: Array<{ id: string; label: string; description?: string }> = [];
+	let availableBundles: Array<{ id: string; label: string; description?: string }> = [];
+
+	// Form data - using a single object with all possible fields
+	let formData = {
+		name: '',
+		commonName: '',
+		description: '',
+		type: 'vaccine' as ProductType,
+		price: null as number | null,
+		priceAvacunar: null as number | null,
+		priceVita: null as number | null,
+		priceColsanitas: null as number | null,
+		imageUrl: '',
+		applicableDoctors: [] as string[],
+		minAge: 0,
+		maxAge: 18,
+		specialIndications: null as string | null,
+		// Vaccine-specific fields
+		manufacturer: '',
+		dosageInfo: '',
+		targetDiseases: '',
+		dosesAndBoosters: '',
+		contraindications: null as string | null,
+		precautions: null as string | null,
+		// Bundle-specific fields
+		includedProductIds: [] as string[],
+		targetMilestone: null as string | null,
+		// Package-specific fields
+		includedDoseBundles: [] as string[],
+	};
 
 	// Available options
 	const productTypes: ProductType[] = ['vaccine', 'bundle', 'package'];
@@ -33,8 +74,80 @@
 	let errors: Record<string, string> = {};
 
 	onMount(async () => {
-		await loadProduct();
+		await Promise.all([loadProduct(), loadDoctors(), loadProducts(), loadBundles()]);
 	});
+
+	// Load available doctors from users collection
+	const loadDoctors = async () => {
+		try {
+			const usersSnapshot = await getDocs(collection(db, 'users'));
+			availableDoctors = usersSnapshot.docs
+				.filter((doc) => doc.data().role === 'doctor')
+				.map((doc) => ({
+					id: doc.id,
+					label: doc.data().name || 'Sin nombre',
+					description: doc.data().specialty || 'Sin especialidad',
+				}));
+		} catch (error) {
+			console.error('Error loading doctors:', error);
+		}
+	};
+
+	// Load available products from products collection (only vaccines for bundles)
+	const loadProducts = async () => {
+		try {
+			const productsSnapshot = await getDocs(collection(db, 'products'));
+			availableProducts = productsSnapshot.docs
+				.filter((doc) => doc.data().type === 'vaccine') // Only include vaccines
+				.map((doc) => ({
+					id: doc.id,
+					label: doc.data().name || 'Sin nombre',
+					description: doc.data().commonName || 'Sin nombre común',
+				}));
+		} catch (error) {
+			console.error('Error loading products:', error);
+		}
+	};
+
+	// Load available bundles from products collection
+	const loadBundles = async () => {
+		try {
+			const bundlesSnapshot = await getDocs(
+				query(collection(db, 'products'), where('type', '==', 'bundle')),
+			);
+			availableBundles = bundlesSnapshot.docs.map((doc) => ({
+				id: doc.id,
+				label: doc.data().name || 'Sin nombre',
+				description: doc.data().commonName || 'Sin nombre común',
+			}));
+		} catch (error) {
+			console.error('Error loading bundles:', error);
+		}
+	};
+
+	// Handle doctor selection
+	const handleDoctorSelect = (event: CustomEvent) => {
+		const { option } = event.detail;
+		if (!formData.applicableDoctors?.includes(option.id)) {
+			formData.applicableDoctors = [...formData.applicableDoctors, option.id];
+		}
+	};
+
+	// Handle product selection
+	const handleProductSelect = (event: CustomEvent) => {
+		const { option } = event.detail;
+		if (!formData.includedProductIds.includes(option.id)) {
+			formData.includedProductIds = [...formData.includedProductIds, option.id];
+		}
+	};
+
+	// Handle bundle selection
+	const handleBundleSelect = (event: CustomEvent) => {
+		const { option } = event.detail;
+		if (!formData.includedDoseBundles.includes(option.id)) {
+			formData.includedDoseBundles = [...formData.includedDoseBundles, option.id];
+		}
+	};
 
 	const loadProduct = async () => {
 		const productId = $page.params.id;
@@ -63,19 +176,45 @@
 					minAge: data.minAge || 0,
 					maxAge: data.maxAge || 18,
 					specialIndications: data.specialIndications || null,
-					manufacturer: data.manufacturer || null,
-					dosageInfo: data.dosageInfo || null,
-					targetDiseases: data.targetDiseases || null,
-					dosesAndBoosters: data.dosesAndBoosters || null,
-					includedProductIds: data.includedProductIds || null,
-					includedDoseBundles: data.includedDoseBundles || null,
+					manufacturer: data.manufacturer || '',
+					dosageInfo: data.dosageInfo || '',
+					targetDiseases: data.targetDiseases || '',
+					dosesAndBoosters: data.dosesAndBoosters || '',
+					contraindications: data.contraindications || null,
+					precautions: data.precautions || null,
+					includedProductIds: data.includedProductIds || [],
+					includedDoseBundles: data.includedDoseBundles || [],
 					targetMilestone: data.targetMilestone || null,
 					createdAt: data.createdAt?.toDate() || new Date(),
 					updatedAt: data.updatedAt?.toDate() || new Date(),
 				} as Product;
 
 				// Initialize form data
-				formData = { ...product };
+				formData = {
+					name: product.name,
+					commonName: product.commonName,
+					description: product.description,
+					type: product.type,
+					price: product.price,
+					priceAvacunar: product.priceAvacunar,
+					priceVita: product.priceVita,
+					priceColsanitas: product.priceColsanitas,
+					imageUrl: product.imageUrl,
+					applicableDoctors: product.applicableDoctors,
+					minAge: product.minAge,
+					maxAge: product.maxAge,
+					specialIndications: product.specialIndications,
+					manufacturer: (product as any).manufacturer || '',
+					dosageInfo: (product as any).dosageInfo || '',
+					targetDiseases: (product as any).targetDiseases || '',
+					dosesAndBoosters: (product as any).dosesAndBoosters || '',
+					contraindications: (product as any).contraindications || null,
+					precautions: (product as any).precautions || null,
+					includedProductIds: (product as any).includedProductIds || [],
+					includedDoseBundles: (product as any).includedDoseBundles || [],
+					targetMilestone: (product as any).targetMilestone || null,
+				};
+
 				// Resolve the image URL for preview
 				if (product.imageUrl) {
 					imagePreview = await getImageUrl(product.imageUrl, product.type);
@@ -106,6 +245,36 @@
 
 		if (!formData.description?.trim()) {
 			errors.description = 'La descripción es requerida';
+		}
+
+		// Type-specific validation
+		if (formData.type === 'vaccine') {
+			if (!formData.manufacturer?.trim()) {
+				errors.manufacturer = 'El fabricante es requerido para vacunas';
+			}
+			if (!formData.dosageInfo?.trim()) {
+				errors.dosageInfo = 'La información de dosis es requerida para vacunas';
+			}
+			if (!formData.targetDiseases?.trim()) {
+				errors.targetDiseases = 'Las enfermedades objetivo son requeridas para vacunas';
+			}
+			if (!formData.dosesAndBoosters?.trim()) {
+				errors.dosesAndBoosters =
+					'La información de dosis y refuerzos es requerida para vacunas';
+			}
+		}
+
+		if (formData.type === 'bundle') {
+			if (!formData.includedProductIds || formData.includedProductIds.length === 0) {
+				errors.includedProductIds = 'Debe incluir al menos un producto para el paquete';
+			}
+		}
+
+		if (formData.type === 'package') {
+			if (!formData.includedDoseBundles || formData.includedDoseBundles.length === 0) {
+				errors.includedDoseBundles =
+					'Debe incluir al menos un paquete de dosis para el programa';
+			}
 		}
 
 		if (formData.price !== null && formData.price !== undefined && formData.price < 0) {
@@ -147,8 +316,42 @@
 		if (event.key === 'Enter' && target.value.trim()) {
 			event.preventDefault();
 			if (!formData.applicableDoctors?.includes(target.value.trim())) {
-				formData.applicableDoctors = [
-					...(formData.applicableDoctors || []),
+				formData.applicableDoctors = [...formData.applicableDoctors, target.value.trim()];
+			}
+			target.value = '';
+		}
+	};
+
+	const removeApplicableDoctor = (doctorToRemove: string) => {
+		formData.applicableDoctors = formData.applicableDoctors.filter(
+			(doctor) => doctor !== doctorToRemove,
+		);
+	};
+
+	const addIncludedProduct = (event: KeyboardEvent) => {
+		const target = event.target as HTMLInputElement;
+		if (event.key === 'Enter' && target.value.trim()) {
+			event.preventDefault();
+			if (!formData.includedProductIds.includes(target.value.trim())) {
+				formData.includedProductIds = [...formData.includedProductIds, target.value.trim()];
+			}
+			target.value = '';
+		}
+	};
+
+	const removeIncludedProduct = (productToRemove: string) => {
+		formData.includedProductIds = formData.includedProductIds.filter(
+			(product) => product !== productToRemove,
+		);
+	};
+
+	const addIncludedDoseBundle = (event: KeyboardEvent) => {
+		const target = event.target as HTMLInputElement;
+		if (event.key === 'Enter' && target.value.trim()) {
+			event.preventDefault();
+			if (!formData.includedDoseBundles.includes(target.value.trim())) {
+				formData.includedDoseBundles = [
+					...formData.includedDoseBundles,
 					target.value.trim(),
 				];
 			}
@@ -156,9 +359,10 @@
 		}
 	};
 
-	const removeApplicableDoctor = (doctorToRemove: string) => {
-		formData.applicableDoctors =
-			formData.applicableDoctors?.filter((doctor) => doctor !== doctorToRemove) || [];
+	const removeIncludedDoseBundle = (bundleToRemove: string) => {
+		formData.includedDoseBundles = formData.includedDoseBundles.filter(
+			(bundle) => bundle !== bundleToRemove,
+		);
 	};
 
 	const handleSubmit = async () => {
@@ -198,8 +402,7 @@
 				maxAge: Number(formData.maxAge || 18),
 			};
 
-			// Remove undefined values and id
-			delete updateData.id;
+			// Remove undefined values
 			Object.keys(updateData).forEach((key) => {
 				if (updateData[key as keyof typeof updateData] === undefined) {
 					delete updateData[key as keyof typeof updateData];
@@ -351,28 +554,6 @@
 							<span class="error-text">{errors.description}</span>
 						{/if}
 					</div>
-
-					<div class="form-row">
-						<div class="form-group">
-							<label for="manufacturer">Fabricante</label>
-							<input
-								id="manufacturer"
-								type="text"
-								bind:value={formData.manufacturer}
-								placeholder="Ej: Pfizer"
-							/>
-						</div>
-
-						<div class="form-group">
-							<label for="targetMilestone">Hito Objetivo</label>
-							<input
-								id="targetMilestone"
-								type="text"
-								bind:value={formData.targetMilestone}
-								placeholder="Ej: 2 meses"
-							/>
-						</div>
-					</div>
 				</div>
 
 				<!-- Pricing -->
@@ -468,46 +649,159 @@
 					{/if}
 				</div>
 
-				<!-- Medical Information -->
+				<!-- Vaccine-specific fields -->
+				{#if formData.type === 'vaccine'}
+					<div class="form-section">
+						<h3>Información de Vacuna</h3>
+
+						<div class="form-group">
+							<label for="manufacturer">Fabricante *</label>
+							<input
+								id="manufacturer"
+								type="text"
+								bind:value={formData.manufacturer}
+								placeholder="Ej: Pfizer"
+								class:error={errors.manufacturer}
+							/>
+							{#if errors.manufacturer}
+								<span class="error-text">{errors.manufacturer}</span>
+							{/if}
+						</div>
+
+						<div class="form-group">
+							<label for="dosageInfo">Información de Dosis *</label>
+							<textarea
+								id="dosageInfo"
+								bind:value={formData.dosageInfo}
+								placeholder="Ej: 0.5ml por vía intramuscular"
+								rows="2"
+								class:error={errors.dosageInfo}
+							/>
+							{#if errors.dosageInfo}
+								<span class="error-text">{errors.dosageInfo}</span>
+							{/if}
+						</div>
+
+						<div class="form-group">
+							<label for="targetDiseases">Enfermedades Objetivo *</label>
+							<textarea
+								id="targetDiseases"
+								bind:value={formData.targetDiseases}
+								placeholder="Ej: Sarampión, Paperas, Rubéola"
+								rows="2"
+								class:error={errors.targetDiseases}
+							/>
+							{#if errors.targetDiseases}
+								<span class="error-text">{errors.targetDiseases}</span>
+							{/if}
+						</div>
+
+						<div class="form-group">
+							<label for="dosesAndBoosters">Dosis y Refuerzos *</label>
+							<textarea
+								id="dosesAndBoosters"
+								bind:value={formData.dosesAndBoosters}
+								placeholder="Ej: 2 dosis con refuerzo a los 4 años"
+								rows="2"
+								class:error={errors.dosesAndBoosters}
+							/>
+							{#if errors.dosesAndBoosters}
+								<span class="error-text">{errors.dosesAndBoosters}</span>
+							{/if}
+						</div>
+
+						<div class="form-group">
+							<label for="contraindications">Contraindicaciones</label>
+							<textarea
+								id="contraindications"
+								bind:value={formData.contraindications}
+								placeholder="Ej: Contraindicado en pacientes inmunocomprometidos"
+								rows="2"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label for="precautions">Precauciones</label>
+							<textarea
+								id="precautions"
+								bind:value={formData.precautions}
+								placeholder="Ej: Precaución en pacientes con fiebre"
+								rows="2"
+							/>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Bundle-specific fields -->
+				{#if formData.type === 'bundle'}
+					<div class="form-section">
+						<h3>Información de Paquete</h3>
+
+						<div class="form-group">
+							<label for="targetMilestone">Hito Objetivo</label>
+							<input
+								id="targetMilestone"
+								type="text"
+								bind:value={formData.targetMilestone}
+								placeholder="Ej: 2 meses"
+							/>
+						</div>
+
+						<div class="form-group">
+							<label>Vacunas Incluidas *</label>
+							<AutocompleteInput
+								placeholder="Busca y selecciona vacunas para incluir en este paquete"
+								options={availableProducts}
+								selectedOptions={formData.includedProductIds}
+								removeOption={removeIncludedProduct}
+								on:select={handleProductSelect}
+							/>
+							<p class="help-text">
+								Busca vacunas por nombre o ID y selecciónalos para incluirlos en
+								este paquete (solo se muestran vacunas)
+							</p>
+							{#if errors.includedProductIds}
+								<span class="error-text">{errors.includedProductIds}</span>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Package-specific fields -->
+				{#if formData.type === 'package'}
+					<div class="form-section">
+						<h3>Información de Programa</h3>
+
+						<div class="form-group">
+							<label>Paquetes de Dosis Incluidos *</label>
+							<AutocompleteInput
+								placeholder="Busca y selecciona paquetes de dosis para incluir en este programa"
+								options={availableBundles}
+								selectedOptions={formData.includedDoseBundles}
+								removeOption={removeIncludedDoseBundle}
+								on:select={handleBundleSelect}
+							/>
+							<p class="help-text">
+								Busca paquetes de dosis por nombre o ID y selecciónalos para
+								incluirlos en este programa
+							</p>
+							{#if errors.includedDoseBundles}
+								<span class="error-text">{errors.includedDoseBundles}</span>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				<!-- General Medical Information -->
 				<div class="form-section">
-					<h3>Información Médica</h3>
-
-					<div class="form-group">
-						<label for="dosageInfo">Información de Dosis</label>
-						<textarea
-							id="dosageInfo"
-							bind:value={formData.dosageInfo}
-							placeholder="Ej: 0.5ml por vía intramuscular"
-							rows="2"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="targetDiseases">Enfermedades Objetivo</label>
-						<textarea
-							id="targetDiseases"
-							bind:value={formData.targetDiseases}
-							placeholder="Ej: Sarampión, Paperas, Rubéola"
-							rows="2"
-						/>
-					</div>
-
-					<div class="form-group">
-						<label for="dosesAndBoosters">Dosis y Refuerzos</label>
-						<textarea
-							id="dosesAndBoosters"
-							bind:value={formData.dosesAndBoosters}
-							placeholder="Ej: 2 dosis con refuerzo a los 4 años"
-							rows="2"
-						/>
-					</div>
+					<h3>Información Médica General</h3>
 
 					<div class="form-group">
 						<label for="specialIndications">Indicaciones Especiales</label>
 						<textarea
 							id="specialIndications"
 							bind:value={formData.specialIndications}
-							placeholder="Ej: Contraindicado en pacientes inmunocomprometidos"
+							placeholder="Ej: Requiere evaluación médica previa"
 							rows="2"
 						/>
 					</div>
@@ -519,28 +813,17 @@
 
 					<div class="form-group">
 						<label>Doctores que pueden aplicar este producto</label>
-						<input
-							type="text"
-							placeholder="Presiona Enter para agregar doctor"
-							on:keydown={addApplicableDoctor}
+						<AutocompleteInput
+							placeholder="Busca y selecciona doctores que pueden aplicar este producto"
+							options={availableDoctors}
+							selectedOptions={formData.applicableDoctors}
+							removeOption={removeApplicableDoctor}
+							on:select={handleDoctorSelect}
 						/>
 						<p class="help-text">
-							Agrega los nombres de los doctores que pueden aplicar este producto
+							Busca doctores por nombre o especialidad y selecciónalos para este
+							producto
 						</p>
-						{#if formData.applicableDoctors && formData.applicableDoctors.length > 0}
-							<div class="tags-container">
-								{#each formData.applicableDoctors as doctor}
-									<span class="tag">
-										{doctor}
-										<button
-											type="button"
-											on:click={() => removeApplicableDoctor(doctor)}
-											class="remove-tag">×</button
-										>
-									</span>
-								{/each}
-							</div>
-						{/if}
 					</div>
 				</div>
 
@@ -747,7 +1030,8 @@
 	}
 
 	.form-group input.error,
-	.form-group textarea.error {
+	.form-group textarea.error,
+	.form-group select.error {
 		border-color: var(--color-error);
 	}
 

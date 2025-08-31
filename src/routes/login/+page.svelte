@@ -100,7 +100,7 @@
 					type="email"
 					id="email"
 					bind:value={email}
-					placeholder="admin@vaqplus.com"
+					placeholder="admin@vaqmas.com"
 					on:keypress={handleKeyPress}
 					required
 				/>

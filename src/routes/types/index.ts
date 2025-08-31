@@ -7,7 +7,14 @@ export interface BaseDocument {
 // Product types
 export type ProductType = 'vaccine' | 'bundle' | 'package';
 
-export interface Product extends BaseDocument {
+export enum ProductCategory {
+    vaccine = 'vaccine',
+    medication = 'medication',
+    supplement = 'supplement'
+}
+
+// Base Product interface
+export interface BaseProduct extends BaseDocument {
     type: ProductType;
     name: string;
     commonName: string;
@@ -21,15 +28,51 @@ export interface Product extends BaseDocument {
     minAge: number;
     maxAge: number;
     specialIndications: string | null;
-    manufacturer: string | null;
-    dosageInfo: string | null;
-    targetDiseases: string | null;
-    dosesAndBoosters: string | null;
-    includedProductIds: string[] | null;
-    includedDoseBundles: string[] | null;
-    targetMilestone: string | null;
     resolvedImageUrl?: string;
+    // Optional fields that may exist on different product types
+    manufacturer?: string;
+    dosageInfo?: string;
+    targetDiseases?: string;
+    dosesAndBoosters?: string;
+    contraindications?: string | null;
+    precautions?: string | null;
+    includedProductIds?: string[];
+    includedDoseBundles?: string[];
+    targetMilestone?: string | null;
 }
+
+// Vaccine-specific interface
+export interface Vaccine extends BaseProduct {
+    type: 'vaccine';
+    category: ProductCategory;
+    manufacturer: string; // Required for vaccines
+    dosageInfo: string; // Required for vaccines
+    targetDiseases: string; // Required for vaccines
+    dosesAndBoosters: string; // Required for vaccines
+    contraindications: string | null;
+    precautions: string | null;
+}
+
+// DoseBundle-specific interface
+export interface DoseBundle extends BaseProduct {
+    type: 'bundle';
+    includedProductIds: string[]; // Required for bundles
+    targetMilestone: string | null;
+}
+
+// VaccinationProgram-specific interface
+export interface VaccinationProgram extends BaseProduct {
+    type: 'package';
+    includedDoseBundles: string[]; // Required for packages
+}
+
+// Union type for all products
+export type Product = Vaccine | DoseBundle | VaccinationProgram;
+
+// Type guards
+export const isVaccine = (product: Product): product is Vaccine => product.type === 'vaccine';
+export const isDoseBundle = (product: Product): product is DoseBundle => product.type === 'bundle';
+export const isVaccinationProgram = (product: Product): product is VaccinationProgram => product.type === 'package';
 
 // Article types
 export type ArticleCategory = 'education' | 'promotion' | 'announcement';
@@ -206,7 +249,7 @@ export interface MedicalHistory {
 }
 
 // Form types for creating/editing
-export interface ProductFormData {
+export interface BaseProductFormData {
     type: ProductType;
     name: string;
     commonName: string;
@@ -220,14 +263,31 @@ export interface ProductFormData {
     minAge: number;
     maxAge: number;
     specialIndications: string | null;
-    manufacturer: string | null;
-    dosageInfo: string | null;
-    targetDiseases: string | null;
-    dosesAndBoosters: string | null;
-    includedProductIds: string[] | null;
-    includedDoseBundles: string[] | null;
+}
+
+export interface VaccineFormData extends BaseProductFormData {
+    type: 'vaccine';
+    category: ProductCategory;
+    manufacturer: string;
+    dosageInfo: string;
+    targetDiseases: string;
+    dosesAndBoosters: string;
+    contraindications: string | null;
+    precautions: string | null;
+}
+
+export interface DoseBundleFormData extends BaseProductFormData {
+    type: 'bundle';
+    includedProductIds: string[];
     targetMilestone: string | null;
 }
+
+export interface VaccinationProgramFormData extends BaseProductFormData {
+    type: 'package';
+    includedDoseBundles: string[];
+}
+
+export type ProductFormData = VaccineFormData | DoseBundleFormData | VaccinationProgramFormData;
 
 export interface ArticleFormData {
     title: string;
