@@ -72,10 +72,17 @@
 {:else if isAuthenticated}
 	<div class="admin-layout">
 		<!-- Mobile Menu Toggle -->
-		<button class="mobile-menu-toggle" on:click={toggleSidebar} aria-label="Toggle menu">
-			<svg viewBox="0 0 24 24" class="menu-icon">
-				<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-			</svg>
+		<button
+			class="mobile-menu-toggle"
+			class:sidebar-open={isSidebarOpen}
+			on:click={toggleSidebar}
+			aria-label="Toggle menu"
+		>
+			<div class="hamburger-menu">
+				<span class="hamburger-line" />
+				<span class="hamburger-line" />
+				<span class="hamburger-line" />
+			</div>
 		</button>
 
 		<!-- Sidebar Navigation -->
@@ -88,13 +95,6 @@
 						<p>Panel de Administración</p>
 					</div>
 				</div>
-				<button class="sidebar-close" on:click={closeSidebar} aria-label="Close menu">
-					<svg viewBox="0 0 24 24">
-						<path
-							d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-						/>
-					</svg>
-				</button>
 			</div>
 
 			<ul class="nav-menu">
@@ -241,7 +241,7 @@
 
 		<!-- Overlay for mobile -->
 		{#if isSidebarOpen}
-			<div class="sidebar-overlay" on:click={closeSidebar} />
+			<div class="sidebar-overlay" class:active={isSidebarOpen} on:click={closeSidebar} />
 		{/if}
 
 		<!-- Main Content -->
@@ -295,28 +295,83 @@
 	.mobile-menu-toggle {
 		display: none;
 		position: fixed;
-		top: 1rem;
-		left: 1rem;
+		top: 1.5rem;
+		left: 1.5rem;
 		z-index: 1001;
-		background: var(--primary-600);
-		color: white;
-		border: none;
-		border-radius: 8px;
-		padding: 0.75rem;
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 12px;
+		padding: 0.875rem;
 		cursor: pointer;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-		transition: all 0.3s ease;
+		box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		opacity: 0;
+		transform: translateY(-10px);
+		animation: slideInToggle 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 	}
 
 	.mobile-menu-toggle:hover {
-		background: var(--primary-700);
-		transform: translateY(-2px);
+		background: rgba(255, 255, 255, 1);
+		transform: translateY(-1px);
+		box-shadow: 0 4px 25px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.15);
 	}
 
-	.menu-icon {
-		width: 24px;
-		height: 24px;
-		fill: currentColor;
+	.mobile-menu-toggle:active {
+		transform: translateY(0);
+		box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+	}
+
+	/* Hamburger Menu Icon */
+	.hamburger-menu {
+		width: 20px;
+		height: 16px;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+	}
+
+	.hamburger-line {
+		width: 100%;
+		height: 2px;
+		background: var(--neutral-700);
+		border-radius: 1px;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		transform-origin: center;
+	}
+
+	/* Animated hamburger when sidebar is open */
+	.mobile-menu-toggle.sidebar-open .hamburger-line:nth-child(1) {
+		transform: translateY(7px) rotate(45deg);
+	}
+
+	.mobile-menu-toggle.sidebar-open .hamburger-line:nth-child(2) {
+		opacity: 0;
+		transform: scaleX(0);
+	}
+
+	.mobile-menu-toggle.sidebar-open .hamburger-line:nth-child(3) {
+		transform: translateY(-7px) rotate(-45deg);
+	}
+
+	/* Slide-in animation for mobile menu toggle */
+	@keyframes slideInToggle {
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Pulse attention animation */
+	@keyframes pulseAttention {
+		0%,
+		100% {
+			box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.1);
+		}
+		50% {
+			box-shadow: 0 2px 25px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.15);
+		}
 	}
 
 	/* Sidebar */
@@ -339,27 +394,6 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-	}
-
-	.sidebar-close {
-		display: none;
-		background: none;
-		border: none;
-		color: white;
-		cursor: pointer;
-		padding: 0.5rem;
-		border-radius: 4px;
-		transition: background-color 0.2s ease;
-	}
-
-	.sidebar-close:hover {
-		background-color: rgba(255, 255, 255, 0.1);
-	}
-
-	.sidebar-close svg {
-		width: 24px;
-		height: 24px;
-		fill: currentColor;
 	}
 
 	.sidebar-logo {
@@ -459,8 +493,15 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
+		background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
+		backdrop-filter: blur(4px);
 		z-index: 999;
+		opacity: 0;
+		transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	.sidebar-overlay.active {
+		opacity: 1;
 	}
 
 	.main-content {
@@ -485,6 +526,9 @@
 	@media (max-width: 768px) {
 		.mobile-menu-toggle {
 			display: block;
+			/* Add a subtle pulse effect when first appearing */
+			animation: slideInToggle 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+				pulseAttention 2s ease-in-out 0.5s;
 		}
 
 		.sidebar {
@@ -496,10 +540,6 @@
 			transform: translateX(0);
 		}
 
-		.sidebar-close {
-			display: block;
-		}
-
 		.sidebar-overlay {
 			display: block;
 		}
@@ -507,7 +547,7 @@
 		.main-content {
 			margin-left: 0;
 			padding: 1rem;
-			padding-top: 5rem; /* Space for mobile menu toggle */
+			padding-top: 6rem; /* Increased space for mobile menu toggle */
 		}
 
 		.logo-text h1 {

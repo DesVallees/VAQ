@@ -180,112 +180,121 @@
 				{/if}
 			</div>
 		{:else}
-			<table class="pediatricians-table">
-				<thead>
-					<tr>
-						<th>Pediatra</th>
-						<th>Especialidad</th>
-						<th>Licencia</th>
-						<th>Contacto</th>
-						<th>Último Acceso</th>
-						<th>Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredPediatricians as pediatrician (pediatrician.id)}
-						<tr class="pediatrician-row">
-							<td>
-								<div class="pediatrician-info">
-									<div class="pediatrician-avatar">
-										{#if pediatrician.photoUrl}
-											<img src={pediatrician.photoUrl} alt="Avatar" />
-										{:else}
-											<svg viewBox="0 0 24 24">
-												<path
-													d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-												/>
-											</svg>
+			<div class="table-scroll-wrapper">
+				<table class="pediatricians-table">
+					<thead>
+						<tr>
+							<th class="col-pediatrician">Pediatra</th>
+							<th class="col-specialty">Especialidad</th>
+							<th class="col-license">Licencia</th>
+							<th class="col-contact">Contacto</th>
+							<th class="col-last-login">Último Acceso</th>
+							<th class="col-actions">Acciones</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filteredPediatricians as pediatrician (pediatrician.id)}
+							<tr class="pediatrician-row">
+								<td class="col-pediatrician">
+									<div class="pediatrician-info">
+										<div class="pediatrician-avatar">
+											{#if pediatrician.photoUrl}
+												<img src={pediatrician.photoUrl} alt="Avatar" />
+											{:else}
+												<svg viewBox="0 0 24 24">
+													<path
+														d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+													/>
+												</svg>
+											{/if}
+										</div>
+										<div class="pediatrician-details">
+											<div class="pediatrician-name">
+												{pediatrician.displayName || 'Sin nombre'}
+											</div>
+											<div class="pediatrician-email">
+												{pediatrician.email}
+											</div>
+										</div>
+									</div>
+								</td>
+								<td class="col-specialty">
+									<div class="specialty-info">
+										<span class="specialty-badge">{pediatrician.specialty}</span
+										>
+										{#if pediatrician.yearsExperience}
+											<div class="experience">
+												{pediatrician.yearsExperience} años de experiencia
+											</div>
 										{/if}
 									</div>
-									<div class="pediatrician-details">
-										<div class="pediatrician-name">
-											{pediatrician.displayName || 'Sin nombre'}
+								</td>
+								<td class="col-license">
+									<div class="license-info">
+										<div class="license-number">
+											{pediatrician.licenseNumber}
 										</div>
-										<div class="pediatrician-email">{pediatrician.email}</div>
 									</div>
-								</div>
-							</td>
-							<td>
-								<div class="specialty-info">
-									<span class="specialty-badge">{pediatrician.specialty}</span>
-									{#if pediatrician.yearsExperience}
-										<div class="experience">
-											{pediatrician.yearsExperience} años de experiencia
-										</div>
-									{/if}
-								</div>
-							</td>
-							<td>
-								<div class="license-info">
-									<div class="license-number">{pediatrician.licenseNumber}</div>
-								</div>
-							</td>
-							<td>
-								<div class="contact-info">
-									{#if pediatrician.phoneNumber}
-										<div class="phone-number">{pediatrician.phoneNumber}</div>
-									{:else}
-										<div class="no-phone">Sin teléfono</div>
-									{/if}
-								</div>
-							</td>
-							<td>
-								<div class="last-login">
-									{formatDateTime(pediatrician.lastLoginAt)}
-								</div>
-							</td>
-							<td>
-								<div class="action-buttons">
-									<button
-										class="action-btn view"
-										on:click={() => showPediatricianDetails(pediatrician)}
-										title="Ver detalles"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn edit"
-										on:click={() =>
-											(window.location.href = `/pediatricians/${pediatrician.id}/edit`)}
-										title="Editar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn delete"
-										on:click={() => handleDelete(pediatrician)}
-										title="Eliminar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-											/>
-										</svg>
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+								</td>
+								<td class="col-contact">
+									<div class="contact-info">
+										{#if pediatrician.phoneNumber}
+											<div class="phone-number">
+												{pediatrician.phoneNumber}
+											</div>
+										{:else}
+											<div class="no-phone">Sin teléfono</div>
+										{/if}
+									</div>
+								</td>
+								<td class="col-last-login">
+									<div class="last-login">
+										{formatDateTime(pediatrician.lastLoginAt)}
+									</div>
+								</td>
+								<td class="col-actions">
+									<div class="action-buttons">
+										<button
+											class="action-btn view"
+											on:click={() => showPediatricianDetails(pediatrician)}
+											title="Ver detalles"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn edit"
+											on:click={() =>
+												(window.location.href = `/pediatricians/${pediatrician.id}/edit`)}
+											title="Editar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn delete"
+											on:click={() => handleDelete(pediatrician)}
+											title="Eliminar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+												/>
+											</svg>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	</div>
 
@@ -464,6 +473,11 @@
 </div>
 
 <style>
+	.table-scroll-wrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	/* Pediatricians specific styles */
 	.pediatricians-table {
 		width: 100%;
@@ -828,6 +842,29 @@
 		.pediatrician-avatar {
 			width: 40px;
 			height: 40px;
+		}
+
+		/* Hide less important columns on mobile */
+		.col-license,
+		.col-contact {
+			display: none;
+		}
+
+		/* Ensure minimum table width for scrolling */
+		.pediatricians-table {
+			min-width: 600px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		/* Hide more columns on very small screens */
+		.col-specialty,
+		.col-last-login {
+			display: none;
+		}
+
+		.pediatricians-table {
+			min-width: 400px;
 		}
 	}
 </style>

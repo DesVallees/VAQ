@@ -162,77 +162,81 @@
 				{/if}
 			</div>
 		{:else}
-			<table class="products-table">
-				<thead>
-					<tr>
-						<th>Nombre</th>
-						<th>Tipo</th>
-						<th>Precio</th>
-						<th>Edad Mín</th>
-						<th>Edad Máx</th>
-						<th>Fabricante</th>
-						<th>Creado</th>
-						<th>Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredProducts as product (product.id)}
-						<tr class="product-row">
-							<td>
-								<div class="product-info">
-									<img
-										src={product.resolvedImageUrl}
-										alt={product.name}
-										class="product-image"
-										on:error={(event) => handleImageError(event, product)}
-									/>
-									<div>
-										<div class="product-name">{product.name}</div>
-										<div class="product-common-name">{product.commonName}</div>
-									</div>
-								</div>
-							</td>
-							<td>
-								<span class="type-badge type-{product.type}">
-									{formatType(product.type)}
-								</span>
-							</td>
-							<td>{formatPrice(product.price)}</td>
-							<td>{product.minAge} años</td>
-							<td>{product.maxAge} años</td>
-							<td>{product.manufacturer || '-'}</td>
-							<td>{formatDate(product.createdAt)}</td>
-							<td>
-								<div class="action-buttons">
-									<button
-										class="action-btn edit"
-										on:click={() =>
-											(window.location.href = `/products/${product.id}/edit`)}
-										title="Editar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn delete"
-										on:click={() => handleDelete(product)}
-										title="Eliminar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-											/>
-										</svg>
-									</button>
-								</div>
-							</td>
+			<div class="table-scroll-wrapper">
+				<table class="products-table">
+					<thead>
+						<tr>
+							<th class="col-name">Nombre</th>
+							<th class="col-type">Tipo</th>
+							<th class="col-price">Precio</th>
+							<th class="col-age-min">Edad Mín</th>
+							<th class="col-age-max">Edad Máx</th>
+							<th class="col-manufacturer">Fabricante</th>
+							<th class="col-created">Creado</th>
+							<th class="col-actions">Acciones</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each filteredProducts as product (product.id)}
+							<tr class="product-row">
+								<td class="col-name">
+									<div class="product-info">
+										<img
+											src={product.resolvedImageUrl}
+											alt={product.name}
+											class="product-image"
+											on:error={(event) => handleImageError(event, product)}
+										/>
+										<div>
+											<div class="product-name">{product.name}</div>
+											<div class="product-common-name">
+												{product.commonName}
+											</div>
+										</div>
+									</div>
+								</td>
+								<td class="col-type">
+									<span class="type-badge type-{product.type}">
+										{formatType(product.type)}
+									</span>
+								</td>
+								<td class="col-price">{formatPrice(product.price)}</td>
+								<td class="col-age-min">{product.minAge} años</td>
+								<td class="col-age-max">{product.maxAge} años</td>
+								<td class="col-manufacturer">{product.manufacturer || '-'}</td>
+								<td class="col-created">{formatDate(product.createdAt)}</td>
+								<td class="col-actions">
+									<div class="action-buttons">
+										<button
+											class="action-btn edit"
+											on:click={() =>
+												(window.location.href = `/products/${product.id}/edit`)}
+											title="Editar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn delete"
+											on:click={() => handleDelete(product)}
+											title="Eliminar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+												/>
+											</svg>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	</div>
 
@@ -379,6 +383,11 @@
 		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 		overflow: hidden;
 		margin-bottom: 2rem;
+	}
+
+	.table-scroll-wrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.loading-state,
@@ -640,6 +649,31 @@
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 0.5rem;
+		}
+
+		/* Hide less important columns on mobile */
+		.col-age-min,
+		.col-age-max,
+		.col-manufacturer,
+		.col-created {
+			display: none;
+		}
+
+		/* Ensure minimum table width for scrolling */
+		.products-table {
+			min-width: 600px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		/* Hide more columns on very small screens */
+		.col-type,
+		.col-price {
+			display: none;
+		}
+
+		.products-table {
+			min-width: 400px;
 		}
 	}
 </style>

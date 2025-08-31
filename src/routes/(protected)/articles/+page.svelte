@@ -207,124 +207,128 @@
 				{/if}
 			</div>
 		{:else}
-			<table class="articles-table">
-				<thead>
-					<tr>
-						<th>Artículo</th>
-						<th>Categoría</th>
-						<th>Autor</th>
-						<th>Estado</th>
-						<th>Vistas</th>
-						<th>Fecha</th>
-						<th>Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredArticles as article (article.id)}
-						<tr class="article-row">
-							<td>
-								<div class="article-info">
-									<div class="article-image">
-										{#if article.resolvedImageUrl}
-											<img
-												src={article.resolvedImageUrl}
-												alt="Imagen destacada"
-												on:error={(event) =>
-													handleImageError(event, article)}
-											/>
-										{:else}
-											<svg viewBox="0 0 24 24">
-												<path
-													d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+			<div class="table-scroll-wrapper">
+				<table class="articles-table">
+					<thead>
+						<tr>
+							<th class="col-article">Artículo</th>
+							<th class="col-category">Categoría</th>
+							<th class="col-author">Autor</th>
+							<th class="col-status">Estado</th>
+							<th class="col-views">Vistas</th>
+							<th class="col-date">Fecha</th>
+							<th class="col-actions">Acciones</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filteredArticles as article (article.id)}
+							<tr class="article-row">
+								<td class="col-article">
+									<div class="article-info">
+										<div class="article-image">
+											{#if article.resolvedImageUrl}
+												<img
+													src={article.resolvedImageUrl}
+													alt="Imagen destacada"
+													on:error={(event) =>
+														handleImageError(event, article)}
 												/>
-											</svg>
+											{:else}
+												<svg viewBox="0 0 24 24">
+													<path
+														d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"
+													/>
+												</svg>
+											{/if}
+										</div>
+										<div class="article-details">
+											<div class="article-title">{article.title}</div>
+											<div class="article-summary">{article.excerpt}</div>
+										</div>
+									</div>
+								</td>
+								<td class="col-category">
+									<span
+										class={getCategoryBadgeClass(article.category)}
+										style="background-color: {getCategoryColor(
+											article.category,
+										)}"
+									>
+										{formatCategory(article.category)}
+									</span>
+								</td>
+								<td class="col-author">
+									<div class="author-info">
+										<div class="author-name">{article.author}</div>
+									</div>
+								</td>
+								<td class="col-status">
+									<div class="status-info">
+										{#if article.publishedAt}
+											<span class="status-badge published">Publicado</span>
+										{:else}
+											<span class="status-badge draft">Borrador</span>
 										{/if}
 									</div>
-									<div class="article-details">
-										<div class="article-title">{article.title}</div>
-										<div class="article-summary">{article.excerpt}</div>
+								</td>
+								<td class="col-views">
+									<div class="views-info">
+										<div class="views-count">-</div>
 									</div>
-								</div>
-							</td>
-							<td>
-								<span
-									class={getCategoryBadgeClass(article.category)}
-									style="background-color: {getCategoryColor(article.category)}"
-								>
-									{formatCategory(article.category)}
-								</span>
-							</td>
-							<td>
-								<div class="author-info">
-									<div class="author-name">{article.author}</div>
-								</div>
-							</td>
-							<td>
-								<div class="status-info">
-									{#if article.publishedAt}
-										<span class="status-badge published">Publicado</span>
-									{:else}
-										<span class="status-badge draft">Borrador</span>
-									{/if}
-								</div>
-							</td>
-							<td>
-								<div class="views-info">
-									<div class="views-count">-</div>
-								</div>
-							</td>
-							<td>
-								<div class="date-info">
-									<div class="publish-date">
-										{formatDate(article.publishedAt)}
+								</td>
+								<td class="col-date">
+									<div class="date-info">
+										<div class="publish-date">
+											{formatDate(article.publishedAt)}
+										</div>
+										<div class="create-date">
+											Creado: {formatDate(article.createdAt)}
+										</div>
 									</div>
-									<div class="create-date">
-										Creado: {formatDate(article.createdAt)}
+								</td>
+								<td class="col-actions">
+									<div class="action-buttons">
+										<button
+											class="action-btn view"
+											on:click={() => openDetails(article)}
+											title="Ver detalles"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn edit"
+											on:click={() =>
+												(window.location.href = `/articles/${article.id}/edit`)}
+											title="Editar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn delete"
+											on:click={() => handleDelete(article)}
+											title="Eliminar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+												/>
+											</svg>
+										</button>
 									</div>
-								</div>
-							</td>
-							<td>
-								<div class="action-buttons">
-									<button
-										class="action-btn view"
-										on:click={() => openDetails(article)}
-										title="Ver detalles"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn edit"
-										on:click={() =>
-											(window.location.href = `/articles/${article.id}/edit`)}
-										title="Editar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn delete"
-										on:click={() => handleDelete(article)}
-										title="Eliminar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-											/>
-										</svg>
-									</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	</div>
 
@@ -525,6 +529,11 @@
 </div>
 
 <style>
+	.table-scroll-wrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	/* Articles specific styles */
 	.articles-table {
 		width: 100%;
@@ -968,6 +977,29 @@
 
 		.article-summary {
 			font-size: var(--font-size-xs);
+		}
+
+		/* Hide less important columns on mobile */
+		.col-author,
+		.col-views {
+			display: none;
+		}
+
+		/* Ensure minimum table width for scrolling */
+		.articles-table {
+			min-width: 600px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		/* Hide more columns on very small screens */
+		.col-category,
+		.col-date {
+			display: none;
+		}
+
+		.articles-table {
+			min-width: 400px;
 		}
 	}
 </style>

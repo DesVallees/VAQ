@@ -261,108 +261,112 @@
 				{/if}
 			</div>
 		{:else}
-			<table class="appointments-table">
-				<thead>
-					<tr>
-						<th>Paciente</th>
-						<th>Doctor</th>
-						<th>Fecha y Hora</th>
-						<th>Motivo</th>
-						<th>Estado</th>
-						<th>Acciones</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredAppointments as appointment (appointment.id)}
-						<tr class="appointment-row">
-							<td>
-								<div class="patient-info">
-									<div class="patient-name">
-										{appointment.patientName || 'Sin nombre'}
-									</div>
-									<div class="patient-id">ID: {appointment.patientId}</div>
-								</div>
-							</td>
-							<td>
-								<div class="doctor-info">
-									<div class="doctor-name">
-										{appointment.doctorName || 'Sin nombre'}
-									</div>
-									<div class="doctor-specialty">
-										{appointment.doctorSpecialty || 'Sin especialidad'}
-									</div>
-								</div>
-							</td>
-							<td>
-								<div class="datetime-info">
-									<div class="appointment-date">
-										{formatDate(appointment.dateTime)}
-									</div>
-									<div class="appointment-time">
-										{formatTime(appointment.dateTime)}
-									</div>
-								</div>
-							</td>
-							<td>
-								<div class="reason-info">
-									<div class="appointment-type">
-										{formatType(appointment.type)}
-									</div>
-									{#if appointment.notes}
-										<div class="appointment-notes">{appointment.notes}</div>
-									{/if}
-								</div>
-							</td>
-							<td>
-								<span
-									class={getStatusBadgeClass(appointment.status)}
-									style="background-color: {getStatusColor(appointment.status)}"
-								>
-									{formatStatus(appointment.status)}
-								</span>
-							</td>
-							<td>
-								<div class="action-buttons">
-									<button
-										class="action-btn view"
-										on:click={() => showAppointmentDetails(appointment)}
-										title="Ver detalles"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn edit"
-										on:click={() =>
-											(window.location.href = `/appointments/${appointment.id}/edit`)}
-										title="Editar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-											/>
-										</svg>
-									</button>
-									<button
-										class="action-btn delete"
-										on:click={() => handleDelete(appointment)}
-										title="Eliminar"
-									>
-										<svg viewBox="0 0 24 24">
-											<path
-												d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-											/>
-										</svg>
-									</button>
-								</div>
-							</td>
+			<div class="table-scroll-wrapper">
+				<table class="appointments-table">
+					<thead>
+						<tr>
+							<th class="col-patient">Paciente</th>
+							<th class="col-doctor">Doctor</th>
+							<th class="col-datetime">Fecha y Hora</th>
+							<th class="col-reason">Motivo</th>
+							<th class="col-status">Estado</th>
+							<th class="col-actions">Acciones</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{#each filteredAppointments as appointment (appointment.id)}
+							<tr class="appointment-row">
+								<td class="col-patient">
+									<div class="patient-info">
+										<div class="patient-name">
+											{appointment.patientName || 'Sin nombre'}
+										</div>
+										<div class="patient-id">ID: {appointment.patientId}</div>
+									</div>
+								</td>
+								<td class="col-doctor">
+									<div class="doctor-info">
+										<div class="doctor-name">
+											{appointment.doctorName || 'Sin nombre'}
+										</div>
+										<div class="doctor-specialty">
+											{appointment.doctorSpecialty || 'Sin especialidad'}
+										</div>
+									</div>
+								</td>
+								<td class="col-datetime">
+									<div class="datetime-info">
+										<div class="appointment-date">
+											{formatDate(appointment.dateTime)}
+										</div>
+										<div class="appointment-time">
+											{formatTime(appointment.dateTime)}
+										</div>
+									</div>
+								</td>
+								<td class="col-reason">
+									<div class="reason-info">
+										<div class="appointment-type">
+											{formatType(appointment.type)}
+										</div>
+										{#if appointment.notes}
+											<div class="appointment-notes">{appointment.notes}</div>
+										{/if}
+									</div>
+								</td>
+								<td class="col-status">
+									<span
+										class={getStatusBadgeClass(appointment.status)}
+										style="background-color: {getStatusColor(
+											appointment.status,
+										)}"
+									>
+										{formatStatus(appointment.status)}
+									</span>
+								</td>
+								<td class="col-actions">
+									<div class="action-buttons">
+										<button
+											class="action-btn view"
+											on:click={() => showAppointmentDetails(appointment)}
+											title="Ver detalles"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn edit"
+											on:click={() =>
+												(window.location.href = `/appointments/${appointment.id}/edit`)}
+											title="Editar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+												/>
+											</svg>
+										</button>
+										<button
+											class="action-btn delete"
+											on:click={() => handleDelete(appointment)}
+											title="Eliminar"
+										>
+											<svg viewBox="0 0 24 24">
+												<path
+													d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+												/>
+											</svg>
+										</button>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
 		{/if}
 	</div>
 
@@ -571,6 +575,11 @@
 		outline: none;
 		border-color: var(--primary-500);
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	.table-scroll-wrapper {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	.appointments-table {
@@ -842,6 +851,28 @@
 		.modal-content {
 			margin: var(--spacing-2);
 			max-height: 95vh;
+		}
+
+		/* Hide less important columns on mobile */
+		.col-doctor,
+		.col-reason {
+			display: none;
+		}
+
+		/* Ensure minimum table width for scrolling */
+		.appointments-table {
+			min-width: 600px;
+		}
+	}
+
+	@media (max-width: 480px) {
+		/* Hide more columns on very small screens */
+		.col-datetime {
+			display: none;
+		}
+
+		.appointments-table {
+			min-width: 400px;
 		}
 	}
 </style>
