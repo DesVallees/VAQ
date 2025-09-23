@@ -7,6 +7,7 @@
 		doc,
 		getDoc,
 		updateDoc,
+		deleteDoc,
 		serverTimestamp,
 		getDocs,
 		collection,
@@ -72,6 +73,15 @@
 
 	// Validation
 	let errors: Record<string, string> = {};
+
+	// Helper function to resolve storage folder based on product type
+	const resolveFolder = (type: ProductType): string => {
+		const t = type.toLowerCase().trim();
+		if (t === 'vaccine' || t === 'vaccines') return 'products';
+		if (t === 'bundle' || t === 'bundles') return 'bundles';
+		if (t === 'package' || t === 'packages') return 'packages';
+		return t || 'general';
+	};
 
 	onMount(async () => {
 		await Promise.all([loadProduct(), loadDoctors(), loadProducts(), loadBundles()]);
@@ -380,7 +390,8 @@
 				// Delete old image if it exists
 				if (product.imageUrl && !product.imageUrl.startsWith('data:')) {
 					try {
-						const oldImageRef = ref(storage, `products/${product.imageUrl}`);
+						const oldFolder = resolveFolder(product.type);
+						const oldImageRef = ref(storage, `${oldFolder}/${product.imageUrl}`);
 						await deleteObject(oldImageRef);
 					} catch (error) {
 						console.warn('Could not delete old image:', error);
@@ -388,9 +399,11 @@
 				}
 
 				// Upload new image - store only the filename
-				const imageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
+				const folder = resolveFolder(formData.type);
+				const imageName = `${Date.now()}_${imageFile.name}`;
+				const imageRef = ref(storage, `${folder}/${imageName}`);
 				await uploadBytes(imageRef, imageFile);
-				formData.imageUrl = `${Date.now()}_${imageFile.name}`;
+				formData.imageUrl = `${imageName}`;
 			}
 
 			// Prepare data for Firestore
@@ -441,7 +454,8 @@
 			// Delete image from storage if it exists
 			if (product.imageUrl && !product.imageUrl.startsWith('data:')) {
 				try {
-					const imageRef = ref(storage, `products/${product.imageUrl}`);
+					const folder = resolveFolder(product.type);
+					const imageRef = ref(storage, `${folder}/${product.imageUrl}`);
 					await deleteObject(imageRef);
 				} catch (error) {
 					console.warn('Could not delete image:', error);
@@ -449,9 +463,7 @@
 			}
 
 			// Delete document
-			await updateDoc(doc(db, 'products', product.id), {
-				deletedAt: serverTimestamp(),
-			});
+			await deleteDoc(doc(db, 'products', product.id));
 
 			successMessage = 'Producto eliminado exitosamente';
 			setTimeout(() => {
@@ -846,7 +858,12 @@
 
 					{#if imagePreview}
 						<div class="image-preview">
-							<img src={imagePreview} alt="Vista previa" />
+							<img
+								src={imagePreview}
+								alt="Vista previa"
+								data-testid={product.imageUrl}
+								data-product-type={product.type}
+							/>
 							<button type="button" on:click={removeImage} class="remove-image"
 								>Eliminar Imagen</button
 							>

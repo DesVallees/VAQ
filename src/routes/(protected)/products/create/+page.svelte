@@ -6,6 +6,7 @@
 	import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import AutocompleteInput from '../../../components/AutocompleteInput.svelte';
 	import { onMount } from 'svelte';
+	import { getImageUrl } from '../../../lib/utils/imageUtils';
 
 	let loading = false;
 	let imageFile: File | null = null;
@@ -59,6 +60,15 @@
 
 	// Validation
 	let errors: Record<string, string> = {};
+
+	// Helper function to resolve storage folder based on product type
+	const resolveFolder = (type: ProductType): string => {
+		const t = type.toLowerCase().trim();
+		if (t === 'vaccine' || t === 'vaccines') return 'products';
+		if (t === 'bundle' || t === 'bundles') return 'bundles';
+		if (t === 'package' || t === 'packages') return 'packages';
+		return t || 'general';
+	};
 
 	onMount(async () => {
 		await Promise.all([loadDoctors(), loadProducts(), loadBundles()]);
@@ -245,9 +255,11 @@
 		try {
 			// Upload image if selected
 			if (imageFile) {
-				const imageRef = ref(storage, `products/${Date.now()}_${imageFile.name}`);
+				const folder = resolveFolder(formData.type);
+				const imageName = `${Date.now()}_${imageFile.name}`;
+				const imageRef = ref(storage, `${folder}/${imageName}`);
 				await uploadBytes(imageRef, imageFile);
-				formData.imageUrl = `${Date.now()}_${imageFile.name}`;
+				formData.imageUrl = `${imageName}`;
 			}
 
 			// Prepare data for Firestore

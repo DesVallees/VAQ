@@ -201,8 +201,8 @@
 									</span>
 								</td>
 								<td class="col-price">{formatPrice(product.price)}</td>
-								<td class="col-age-min">{product.minAge} años</td>
-								<td class="col-age-max">{product.maxAge} años</td>
+								<td class="col-age-min">{product.minAge} meses</td>
+								<td class="col-age-max">{product.maxAge} meses</td>
 								<td class="col-manufacturer">{product.manufacturer || '-'}</td>
 								<td class="col-created">{formatDate(product.createdAt)}</td>
 								<td class="col-actions">

@@ -105,9 +105,10 @@
 		try {
 			// Upload image if selected
 			if (imageFile) {
-				const imageRef = ref(storage, `articles/${Date.now()}_${imageFile.name}`);
+				const imageName = `${Date.now()}_${imageFile.name}`;
+				const imageRef = ref(storage, `articles/${imageName}`);
 				await uploadBytes(imageRef, imageFile);
-				formData.heroImageUrl = `${Date.now()}_${imageFile.name}`;
+				formData.heroImageUrl = `${imageName}`;
 			}
 
 			// Prepare data for Firestore

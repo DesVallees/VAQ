@@ -39,11 +39,15 @@ export async function getImageUrl(fileName?: string, type?: string): Promise<str
     // Make sure we only keep the base file name (strip accidental paths)
     const baseName = fileName.split('/').pop()!.trim();
     if (!baseName) {
-        return await Promise.resolve(getFallbackImage(type));
+        console.warn(`getImageUrl: falling back for ${fileName}`, 'baseName is empty');
+        // return await Promise.resolve(getFallbackImage(type));
+        return await Promise.resolve(`getImageUrl: falling back for ${fileName}`);
     }
 
     const folder = resolveFolder(type);
     const storagePath = `${folder}/${baseName}`;
+    console.log('storagePath', storagePath);
+
 
     try {
         const fileRef = ref(storage, storagePath);
@@ -52,7 +56,8 @@ export async function getImageUrl(fileName?: string, type?: string): Promise<str
     } catch (err) {
         // Could be missing object or permissions. Fall back gracefully.
         console.warn(`getImageUrl: falling back for ${storagePath}`, err);
-        return await Promise.resolve(getFallbackImage(type));
+        // return await Promise.resolve(getFallbackImage(type));
+        return await Promise.resolve(`getImageUrl: falling back for ${storagePath}`);
     }
 }
 

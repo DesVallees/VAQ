@@ -3,6 +3,7 @@ import { deleteApp, getApps, initializeApp, type FirebaseApp } from "firebase/ap
 import { getFirestore } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -28,3 +29,6 @@ export const auth = getAuth(firebaseApp)
 
 // Export Storage
 export const storage = getStorage(firebaseApp);
+
+// Export Functions
+export const functions = getFunctions(firebaseApp);

@@ -4,6 +4,8 @@
 	import type { User, UserType } from '../../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+	import { getFunctions, httpsCallable } from 'firebase/functions';
+	import { getAuth } from 'firebase/auth';
 	import { onMount } from 'svelte';
 
 	let loading = true;
@@ -108,6 +110,28 @@
 			};
 
 			await updateDoc(doc(db, 'users', user.id), updateData);
+
+			// Detect if admin changed compared to initially loaded user
+			const adminChanged = formData.isAdmin !== user.isAdmin;
+
+			if (adminChanged) {
+				try {
+					const functions = getFunctions();
+					const setAdminClaim = httpsCallable<
+						{ uid: string; admin: boolean },
+						{ ok: boolean }
+					>(functions, 'setAdminClaim');
+					await setAdminClaim({ uid: user.id, admin: !!formData.isAdmin });
+
+					// If the logged-in admin edited their own account, refresh ID token to reflect new claims immediately
+					const auth = getAuth();
+					if (auth.currentUser && auth.currentUser.uid === user.id) {
+						await auth.currentUser.getIdToken(true);
+					}
+				} catch (error) {
+					console.error('Error setting admin claim:', error);
+				}
+			}
 
 			successMessage = 'Usuario actualizado exitosamente';
 			setTimeout(() => {
