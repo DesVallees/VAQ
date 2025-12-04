@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 
 	let isMobileMenuOpen = false;
+	let selectedImage: string | null = null;
 
 	const toggleMobileMenu = () => {
 		isMobileMenuOpen = !isMobileMenuOpen;
@@ -10,6 +11,16 @@
 
 	const closeMobileMenu = () => {
 		isMobileMenuOpen = false;
+	};
+
+	const openImage = (imagePath: string) => {
+		selectedImage = imagePath;
+		document.body.style.overflow = 'hidden';
+	};
+
+	const closeImage = () => {
+		selectedImage = null;
+		document.body.style.overflow = '';
 	};
 
 	// Close mobile menu when clicking on a link
@@ -26,8 +37,18 @@
 			}
 		};
 
+		const handleEscape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' && selectedImage) {
+				closeImage();
+			}
+		};
+
 		document.addEventListener('click', handleClickOutside);
-		return () => document.removeEventListener('click', handleClickOutside);
+		document.addEventListener('keydown', handleEscape);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+			document.removeEventListener('keydown', handleEscape);
+		};
 	});
 </script>
 
@@ -202,6 +223,119 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- SCP Programs Section -->
+	<section id="scp-programs" class="scp-programs-section">
+		<div class="container">
+			<div class="section-header">
+				<h2>Programas de Vacunación SCP</h2>
+				<p class="update-date">Revisado y actualizado, 26 de febrero de 2025</p>
+			</div>
+			<div class="scp-programs-grid">
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/1.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/1.webp"
+							alt="Vacunación menores de 5 años: PAI Colombia"
+						/>
+					</div>
+					<h3>Vacunación de los niños y niñas menores de 5 años: PAI Colombia</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/1-1.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/1-1.webp"
+							alt="Vacunación menores de 5 años: esquema SCP"
+						/>
+					</div>
+					<h3>
+						Vacunación de los niños y niñas menores de 5 años: esquema sugerido por la
+						SCP
+					</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/2.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/2.webp"
+							alt="Vacunación del escolar y adolescente sano"
+						/>
+					</div>
+					<h3>Vacunación del escolar y adolescente sano</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/3.webp')}
+				>
+					<div class="program-image-container">
+						<img src="/images/SCP_programs/3.webp" alt="Vacunación de la gestante" />
+					</div>
+					<h3>Vacunación de la gestante</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/4.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/4.webp"
+							alt="Vacunas recomendadas a los trabajadores de la salud"
+						/>
+					</div>
+					<h3>Vacunas recomendadas a los trabajadores de la salud</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/5.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/5.webp"
+							alt="Vacunas indicadas en pacientes menores de 18 años con enfermedades crónicas"
+						/>
+					</div>
+					<h3>
+						Vacunas indicadas en pacientes menores de 18 años con enfermedades crónicas
+					</h3>
+				</div>
+				<div
+					class="scp-program-card"
+					on:click={() => openImage('/images/SCP_programs/6.webp')}
+				>
+					<div class="program-image-container">
+						<img
+							src="/images/SCP_programs/6.webp"
+							alt="Vacunación en el postrasplante de médula ósea"
+						/>
+					</div>
+					<h3>Vacunación en el postrasplante de médula ósea</h3>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Image Overlay -->
+	{#if selectedImage}
+		<div class="image-overlay" on:click={closeImage} role="button" tabindex="-1">
+			<button class="close-overlay" on:click|stopPropagation={closeImage} aria-label="Cerrar">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<line x1="18" y1="6" x2="6" y2="18" />
+					<line x1="6" y1="6" x2="18" y2="18" />
+				</svg>
+			</button>
+			<div class="overlay-image-container" on:click|stopPropagation>
+				<img src={selectedImage} alt="Programa de vacunación SCP" />
+			</div>
+		</div>
+	{/if}
 
 	<!-- About Section -->
 	<section id="about" class="about-section">
@@ -530,6 +664,7 @@
 
 	.features-section,
 	.products-section,
+	.scp-programs-section,
 	.about-section,
 	.contact-section {
 		padding: 4rem 0;
@@ -847,6 +982,155 @@
 		margin: 0;
 	}
 
+	/* SCP Programs Section */
+	.scp-programs-section {
+		background-color: #f9fafb;
+	}
+
+	.update-date {
+		font-size: 1rem;
+		color: #6b7280;
+		font-style: italic;
+		margin-top: -1rem;
+		margin-bottom: 2rem;
+	}
+
+	.scp-programs-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+		margin-top: 2rem;
+	}
+
+	.scp-program-card {
+		background: white;
+		border-radius: 15px;
+		box-shadow: 0 8px 15px rgba(0, 0, 0, 0.08);
+		overflow: hidden;
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.scp-program-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12);
+	}
+
+	.program-image-container {
+		width: 100%;
+		height: 400px;
+		overflow: hidden;
+		background-color: #f3f4f6;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.program-image-container img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		transition: transform 0.3s ease;
+	}
+
+	.scp-program-card:hover .program-image-container img {
+		transform: scale(1.05);
+	}
+
+	.scp-program-card h3 {
+		padding: 1.5rem;
+		margin: 0;
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: #1e3a8a;
+		text-align: left;
+		line-height: 1.4;
+	}
+
+	/* Image Overlay */
+	.image-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.9);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 10000;
+		padding: 2rem;
+		animation: fadeIn 0.3s ease;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	.close-overlay {
+		position: absolute;
+		top: 2rem;
+		right: 2rem;
+		background: rgba(255, 255, 255, 0.1);
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-radius: 50%;
+		width: 50px;
+		height: 50px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		z-index: 10001;
+	}
+
+	.close-overlay:hover {
+		background: rgba(255, 255, 255, 0.2);
+		border-color: rgba(255, 255, 255, 0.5);
+		transform: rotate(90deg);
+	}
+
+	.close-overlay svg {
+		width: 24px;
+		height: 24px;
+		stroke: white;
+	}
+
+	.overlay-image-container {
+		max-width: 90%;
+		max-height: 90%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		animation: zoomIn 0.3s ease;
+	}
+
+	@keyframes zoomIn {
+		from {
+			transform: scale(0.9);
+			opacity: 0;
+		}
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	.overlay-image-container img {
+		max-width: 100%;
+		max-height: 90vh;
+		object-fit: contain;
+		border-radius: 8px;
+		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+	}
+
 	/* Responsive Design */
 	@media (max-width: 1024px) {
 		.hero-container {
@@ -869,7 +1153,8 @@
 		}
 
 		.features-grid,
-		.products-preview {
+		.products-preview,
+		.scp-programs-grid {
 			grid-template-columns: 1fr;
 		}
 
@@ -1014,6 +1299,32 @@
 
 		.contact-item p {
 			font-size: 0.8rem;
+		}
+
+		.program-image-container {
+			height: 300px;
+		}
+
+		.scp-program-card h3 {
+			font-size: 1rem;
+			padding: 1rem;
+		}
+
+		.close-overlay {
+			top: 1rem;
+			right: 1rem;
+			width: 40px;
+			height: 40px;
+		}
+
+		.close-overlay svg {
+			width: 20px;
+			height: 20px;
+		}
+
+		.overlay-image-container {
+			max-width: 95%;
+			padding: 1rem;
 		}
 
 		.footer-logo-image {

@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { userStore } from './stores/auth';
+	import Toast from './components/Toast.svelte';
 	import './app.css';
 	import { auth, db } from '$lib/firebase/vaqmas';
 	import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -256,9 +257,11 @@
 			<slot />
 		</main>
 	</div>
+	<Toast />
 {:else}
 	<!-- For non-authenticated users, just render the slot (child routes) -->
 	<slot />
+	<Toast />
 {/if}
 
 <style>

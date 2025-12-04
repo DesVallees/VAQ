@@ -10,6 +10,7 @@
 	let isLoading = false;
 	let errorMessage = '';
 	let isAuthenticated = false;
+	let showPassword = false;
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -108,14 +109,57 @@
 
 			<div class="form-group">
 				<label for="password">Contraseña</label>
-				<input
-					type="password"
-					id="password"
-					bind:value={password}
-					placeholder="••••••••"
-					on:keypress={handleKeyPress}
-					required
-				/>
+				<div class="password-input-wrapper">
+					{#if showPassword}
+						<input
+							type="text"
+							id="password"
+							bind:value={password}
+							placeholder="••••••••"
+							on:keypress={handleKeyPress}
+							required
+						/>
+					{:else}
+						<input
+							type="password"
+							id="password"
+							bind:value={password}
+							placeholder="••••••••"
+							on:keypress={handleKeyPress}
+							required
+						/>
+					{/if}
+					<button
+						type="button"
+						class="password-toggle"
+						on:click={() => (showPassword = !showPassword)}
+						aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+					>
+						{#if showPassword}
+							<svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+								/>
+								<line x1="1" y1="1" x2="23" y2="23" />
+							</svg>
+						{:else}
+							<svg
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+								<circle cx="12" cy="12" r="3" />
+							</svg>
+						{/if}
+					</button>
+				</div>
 			</div>
 
 			{#if errorMessage}
@@ -235,6 +279,53 @@
 		border-color: #00aab2;
 		background: white;
 		box-shadow: 0 0 0 3px rgba(0, 170, 178, 0.1);
+	}
+
+	.password-input-wrapper {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.password-input-wrapper input {
+		width: 100%;
+		padding-right: 3rem;
+	}
+
+	.password-toggle {
+		position: absolute;
+		right: 0.75rem;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: #6b7280;
+		transition: all 0.3s ease;
+		border-radius: 6px;
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.password-toggle:hover {
+		background: rgba(0, 170, 178, 0.1);
+		color: #00aab2;
+	}
+
+	.password-toggle:active {
+		transform: scale(0.95);
+	}
+
+	.password-toggle svg {
+		width: 20px;
+		height: 20px;
+		stroke-width: 2;
+	}
+
+	.password-input-wrapper:focus-within .password-toggle {
+		color: #00aab2;
 	}
 
 	.error-message {

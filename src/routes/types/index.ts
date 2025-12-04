@@ -27,6 +27,7 @@ export interface BaseProduct extends BaseDocument {
     applicableDoctors: string[];
     minAge: number;
     maxAge: number;
+    ageUnit?: 'months' | 'years'; // Optional for backwards compatibility, defaults to 'months'
     specialIndications: string | null;
     resolvedImageUrl?: string;
     // Optional fields that may exist on different product types

@@ -8,6 +8,9 @@
 	let products: Product[] = [];
 	let loading = true;
 	let searchTerm = '';
+	let selectedType: ProductType | 'all' = 'all';
+	let sortBy: 'name' | 'price' | 'date' | 'type' = 'type';
+	let sortOrder: 'asc' | 'desc' = 'asc';
 
 	onMount(async () => {
 		await loadProducts();
@@ -93,12 +96,46 @@
 		img.parentNode?.insertBefore(fallback, img);
 	};
 
-	$: filteredProducts = products.filter(
-		(product) =>
-			product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			product.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			product.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()),
-	);
+	$: filteredProducts = products
+		.filter((product) => {
+			// Type filter
+			if (selectedType !== 'all' && product.type !== selectedType) {
+				return false;
+			}
+			// Search filter
+			const searchLower = searchTerm.toLowerCase();
+			return (
+				product.name.toLowerCase().includes(searchLower) ||
+				product.commonName.toLowerCase().includes(searchLower) ||
+				product.manufacturer?.toLowerCase().includes(searchLower)
+			);
+		})
+		.sort((a, b) => {
+			let comparison = 0;
+
+			switch (sortBy) {
+				case 'name':
+					comparison = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+					break;
+				case 'price':
+					const priceA = a.price ?? 0;
+					const priceB = b.price ?? 0;
+					comparison = priceA - priceB;
+					break;
+				case 'date':
+					comparison = a.createdAt.getTime() - b.createdAt.getTime();
+					break;
+				case 'type':
+					comparison = a.type.localeCompare(b.type);
+					// If types are equal, sort by name
+					if (comparison === 0) {
+						comparison = a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+					}
+					break;
+			}
+
+			return sortOrder === 'asc' ? comparison : -comparison;
+		});
 </script>
 
 <svelte:head>
@@ -140,6 +177,62 @@
 			</svg>
 			Crear Producto
 		</button>
+	</div>
+
+	<!-- Filters and Sort Controls -->
+	<div class="controls-bar">
+		<div class="filters-group">
+			<label class="control-label">Filtrar por tipo:</label>
+			<div class="filter-buttons">
+				<button
+					class="filter-btn"
+					class:active={selectedType === 'all'}
+					on:click={() => (selectedType = 'all')}
+				>
+					Todos
+				</button>
+				<button
+					class="filter-btn"
+					class:active={selectedType === 'vaccine'}
+					on:click={() => (selectedType = 'vaccine')}
+				>
+					Vacunas
+				</button>
+				<button
+					class="filter-btn"
+					class:active={selectedType === 'bundle'}
+					on:click={() => (selectedType = 'bundle')}
+				>
+					Paquetes
+				</button>
+				<button
+					class="filter-btn"
+					class:active={selectedType === 'package'}
+					on:click={() => (selectedType = 'package')}
+				>
+					Programas
+				</button>
+			</div>
+		</div>
+
+		<div class="sort-group">
+			<label class="control-label">Ordenar por:</label>
+			<select class="sort-select" bind:value={sortBy}>
+				<option value="name">Nombre</option>
+				<option value="type">Tipo</option>
+				<option value="price">Precio</option>
+				<option value="date">Fecha de creación</option>
+			</select>
+			<button
+				class="sort-order-btn"
+				on:click={() => (sortOrder = sortOrder === 'asc' ? 'desc' : 'asc')}
+				title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+			>
+				<svg viewBox="0 0 24 24" class:desc={sortOrder === 'desc'}>
+					<path d="M7 10l5 5 5-5z" />
+				</svg>
+			</button>
+		</div>
 	</div>
 
 	<!-- Products Table -->
@@ -200,9 +293,19 @@
 										{formatType(product.type)}
 									</span>
 								</td>
-								<td class="col-price">{formatPrice(product.price)}</td>
-								<td class="col-age-min">{product.minAge} meses</td>
-								<td class="col-age-max">{product.maxAge} meses</td>
+								<td class="col-price">
+									{product.type === 'package'
+										? 'N/A'
+										: formatPrice(product.price)}
+								</td>
+								<td class="col-age-min"
+									>{product.minAge}
+									{product.ageUnit === 'years' ? 'años' : 'meses'}</td
+								>
+								<td class="col-age-max"
+									>{product.maxAge}
+									{product.ageUnit === 'years' ? 'años' : 'meses'}</td
+								>
 								<td class="col-manufacturer">{product.manufacturer || '-'}</td>
 								<td class="col-created">{formatDate(product.createdAt)}</td>
 								<td class="col-actions">
@@ -375,6 +478,120 @@
 	.create-btn svg {
 		width: 16px;
 		height: 16px;
+	}
+
+	.controls-bar {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		padding: 1rem;
+		background: white;
+		border-radius: 12px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+		gap: 1.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filters-group,
+	.sort-group {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.control-label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #374151;
+		white-space: nowrap;
+	}
+
+	.filter-buttons {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.filter-btn {
+		padding: 0.5rem 1rem;
+		border: 2px solid #e5e7eb;
+		background: white;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #6b7280;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		white-space: nowrap;
+	}
+
+	.filter-btn:hover {
+		border-color: #667eea;
+		color: #667eea;
+		background: #f5f3ff;
+	}
+
+	.filter-btn.active {
+		background: #667eea;
+		border-color: #667eea;
+		color: white;
+	}
+
+	.sort-select {
+		padding: 0.5rem 1rem;
+		border: 2px solid #e5e7eb;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+		background: white;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		appearance: none;
+		background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 1rem;
+		padding-right: 2.5rem;
+	}
+
+	.sort-select:focus {
+		outline: none;
+		border-color: #667eea;
+		box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+	}
+
+	.sort-order-btn {
+		width: 36px;
+		height: 36px;
+		border: 2px solid #e5e7eb;
+		background: white;
+		border-radius: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		color: #6b7280;
+	}
+
+	.sort-order-btn:hover {
+		border-color: #667eea;
+		color: #667eea;
+		background: #f5f3ff;
+	}
+
+	.sort-order-btn svg {
+		width: 20px;
+		height: 20px;
+		transition: transform 0.2s ease;
+		fill: currentColor;
+	}
+
+	.sort-order-btn svg.desc {
+		transform: rotate(180deg);
 	}
 
 	.table-container {
@@ -635,6 +852,38 @@
 
 		.search-container {
 			max-width: none;
+		}
+
+		.controls-bar {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 1rem;
+		}
+
+		.filters-group,
+		.sort-group {
+			flex-direction: column;
+			align-items: stretch;
+			width: 100%;
+		}
+
+		.filter-buttons {
+			width: 100%;
+		}
+
+		.filter-btn {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.sort-group {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 0.75rem;
+		}
+
+		.sort-select {
+			width: 100%;
 		}
 
 		.stats-grid {

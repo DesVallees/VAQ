@@ -18,6 +18,7 @@
 	import { onMount } from 'svelte';
 	import { getImageUrl } from '../../../../lib/utils/imageUtils';
 	import AutocompleteInput from '../../../../components/AutocompleteInput.svelte';
+	import { toastStore } from '../../../../stores/toast';
 
 	let loading = true;
 	let saving = false;
@@ -39,13 +40,11 @@
 		description: '',
 		type: 'vaccine' as ProductType,
 		price: null as number | null,
-		priceAvacunar: null as number | null,
-		priceVita: null as number | null,
-		priceColsanitas: null as number | null,
 		imageUrl: '',
 		applicableDoctors: [] as string[],
 		minAge: 0,
 		maxAge: 18,
+		ageUnit: 'months' as 'months' | 'years',
 		specialIndications: null as string | null,
 		// Vaccine-specific fields
 		manufacturer: '',
@@ -178,13 +177,11 @@
 					commonName: data.commonName || '',
 					description: data.description || '',
 					price: data.price || null,
-					priceAvacunar: data.priceAvacunar || null,
-					priceVita: data.priceVita || null,
-					priceColsanitas: data.priceColsanitas || null,
 					imageUrl: data.imageUrl || '',
 					applicableDoctors: data.applicableDoctors || [],
 					minAge: data.minAge || 0,
 					maxAge: data.maxAge || 18,
+					ageUnit: data.ageUnit || 'months', // Default to 'months' for backwards compatibility
 					specialIndications: data.specialIndications || null,
 					manufacturer: data.manufacturer || '',
 					dosageInfo: data.dosageInfo || '',
@@ -206,13 +203,11 @@
 					description: product.description,
 					type: product.type,
 					price: product.price,
-					priceAvacunar: product.priceAvacunar,
-					priceVita: product.priceVita,
-					priceColsanitas: product.priceColsanitas,
 					imageUrl: product.imageUrl,
 					applicableDoctors: product.applicableDoctors,
 					minAge: product.minAge,
 					maxAge: product.maxAge,
+					ageUnit: (product as any).ageUnit || 'months', // Default to 'months' for backwards compatibility
 					specialIndications: product.specialIndications,
 					manufacturer: (product as any).manufacturer || '',
 					dosageInfo: (product as any).dosageInfo || '',
@@ -287,7 +282,8 @@
 			}
 		}
 
-		if (formData.price !== null && formData.price !== undefined && formData.price < 0) {
+		// Price validation only applies to non-package products
+		if (formData.type !== 'package' && formData.price !== null && formData.price !== undefined && formData.price < 0) {
 			errors.price = 'El precio debe ser un número válido';
 		}
 
@@ -376,7 +372,22 @@
 	};
 
 	const handleSubmit = async () => {
-		if (!validateForm() || !product) {
+		if (!product) {
+			return;
+		}
+		if (!validateForm()) {
+			const errorCount = Object.keys(errors).length;
+			const errorMessage = errorCount === 1 
+				? 'Por favor, corrige el campo requerido antes de continuar'
+				: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
+			toastStore.error(errorMessage);
+			// Scroll to first error
+			const firstErrorField = Object.keys(errors)[0];
+			const errorElement = document.getElementById(firstErrorField);
+			if (errorElement) {
+				errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				errorElement.focus();
+			}
 			return;
 		}
 
@@ -410,9 +421,11 @@
 			const updateData = {
 				...formData,
 				updatedAt: serverTimestamp(),
-				price: formData.price !== undefined ? Number(formData.price) : null,
+				// Programs don't have prices
+				price: formData.type === 'package' ? null : (formData.price !== undefined ? Number(formData.price) : null),
 				minAge: Number(formData.minAge || 0),
 				maxAge: Number(formData.maxAge || 18),
+				ageUnit: formData.ageUnit || 'months', // Ensure ageUnit is always set
 			};
 
 			// Remove undefined values
@@ -569,12 +582,12 @@
 				</div>
 
 				<!-- Pricing -->
-				<div class="form-section">
-					<h3>Precios</h3>
+				{#if formData.type !== 'package'}
+					<div class="form-section">
+						<h3>Precios</h3>
 
-					<div class="form-row">
 						<div class="form-group">
-							<label for="price">Precio General</label>
+							<label for="price">Precio por Dosis</label>
 							<input
 								id="price"
 								type="number"
@@ -588,54 +601,24 @@
 								<span class="error-text">{errors.price}</span>
 							{/if}
 						</div>
-
-						<div class="form-group">
-							<label for="priceAvacunar">Precio Avacunar</label>
-							<input
-								id="priceAvacunar"
-								type="number"
-								bind:value={formData.priceAvacunar}
-								min="0"
-								step="0.01"
-								placeholder="0.00"
-							/>
-						</div>
 					</div>
-
-					<div class="form-row">
-						<div class="form-group">
-							<label for="priceVita">Precio Vita</label>
-							<input
-								id="priceVita"
-								type="number"
-								bind:value={formData.priceVita}
-								min="0"
-								step="0.01"
-								placeholder="0.00"
-							/>
-						</div>
-
-						<div class="form-group">
-							<label for="priceColsanitas">Precio Colsanitas</label>
-							<input
-								id="priceColsanitas"
-								type="number"
-								bind:value={formData.priceColsanitas}
-								min="0"
-								step="0.01"
-								placeholder="0.00"
-							/>
-						</div>
-					</div>
-				</div>
+				{/if}
 
 				<!-- Age Range -->
 				<div class="form-section">
 					<h3>Rango de Edad</h3>
 
+					<div class="form-group">
+						<label for="ageUnit">Unidad de Edad</label>
+						<select id="ageUnit" bind:value={formData.ageUnit}>
+							<option value="months">Meses</option>
+							<option value="years">Años</option>
+						</select>
+					</div>
+
 					<div class="form-row">
 						<div class="form-group">
-							<label for="minAge">Edad Mínima (meses)</label>
+							<label for="minAge">Edad Mínima ({formData.ageUnit === 'months' ? 'meses' : 'años'})</label>
 							<input
 								id="minAge"
 								type="number"
@@ -646,7 +629,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="maxAge">Edad Máxima (meses)</label>
+							<label for="maxAge">Edad Máxima ({formData.ageUnit === 'months' ? 'meses' : 'años'})</label>
 							<input
 								id="maxAge"
 								type="number"
@@ -681,7 +664,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="dosageInfo">Información de Dosis *</label>
+							<label for="dosageInfo">Vía de Administración *</label>
 							<textarea
 								id="dosageInfo"
 								bind:value={formData.dosageInfo}
@@ -733,11 +716,11 @@
 						</div>
 
 						<div class="form-group">
-							<label for="precautions">Precauciones</label>
+							<label for="precautions">Efectos Secundarios</label>
 							<textarea
 								id="precautions"
 								bind:value={formData.precautions}
-								placeholder="Ej: Precaución en pacientes con fiebre"
+								placeholder="Ej: Fiebre leve, dolor en el sitio de inyección, malestar general"
 								rows="2"
 							/>
 						</div>

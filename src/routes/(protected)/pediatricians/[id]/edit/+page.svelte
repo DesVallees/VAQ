@@ -5,6 +5,7 @@
 	import { db } from '$lib/firebase/vaqmas';
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { onMount } from 'svelte';
+	import { toastStore } from '../../../../stores/toast';
 
 	let loading = true;
 	let saving = false;
@@ -119,7 +120,22 @@
 	};
 
 	const handleSubmit = async () => {
-		if (!validateForm() || !pediatrician) {
+		if (!pediatrician) {
+			return;
+		}
+		if (!validateForm()) {
+			const errorCount = Object.keys(errors).length;
+			const errorMessage = errorCount === 1 
+				? 'Por favor, corrige el campo requerido antes de continuar'
+				: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
+			toastStore.error(errorMessage);
+			// Scroll to first error
+			const firstErrorField = Object.keys(errors)[0];
+			const errorElement = document.getElementById(firstErrorField);
+			if (errorElement) {
+				errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				errorElement.focus();
+			}
 			return;
 		}
 
