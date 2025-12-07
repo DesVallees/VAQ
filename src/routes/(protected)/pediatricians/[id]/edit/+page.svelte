@@ -125,9 +125,10 @@
 		}
 		if (!validateForm()) {
 			const errorCount = Object.keys(errors).length;
-			const errorMessage = errorCount === 1 
-				? 'Por favor, corrige el campo requerido antes de continuar'
-				: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
+			const errorMessage =
+				errorCount === 1
+					? 'Por favor, corrige el campo requerido antes de continuar'
+					: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
 			toastStore.error(errorMessage);
 			// Scroll to first error
 			const firstErrorField = Object.keys(errors)[0];

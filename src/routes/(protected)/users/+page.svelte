@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
 	import type { User, UserType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
@@ -12,7 +14,73 @@
 	let selectedUser: User | null = null;
 	let showDetails = false;
 
+	const STORAGE_KEY = 'users-filters';
+
+	// Save to sessionStorage
+	function saveToStorage() {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					searchTerm,
+					typeFilter,
+					adminFilter,
+				}),
+			);
+		}
+	}
+
+	// Load from sessionStorage
+	function loadFromStorage() {
+		if (typeof window !== 'undefined') {
+			const stored = sessionStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					searchTerm = parsed.searchTerm || '';
+					typeFilter = parsed.typeFilter || 'all';
+					// Use nullish coalescing to handle false boolean values correctly
+					adminFilter = parsed.adminFilter ?? 'all';
+				} catch (e) {
+					console.error('Error loading from sessionStorage:', e);
+				}
+			}
+		}
+	}
+
+	// Update URL and sessionStorage when filters change
+	function updateURL() {
+		const params = new URLSearchParams();
+		if (searchTerm) params.set('search', searchTerm);
+		if (typeFilter !== 'all') params.set('type', typeFilter);
+		if (adminFilter !== 'all') params.set('admin', String(adminFilter));
+
+		const queryString = params.toString();
+		const newUrl = queryString ? `${$page.url.pathname}?${queryString}` : $page.url.pathname;
+		goto(newUrl, { replaceState: true, noScroll: true });
+		saveToStorage();
+	}
+
+	// Initialize from URL params (priority) or sessionStorage
+	function initializeFromURL() {
+		const params = $page.url.searchParams;
+
+		// URL params take priority if they exist
+		if (params.has('search') || params.has('type') || params.has('admin')) {
+			searchTerm = params.get('search') || '';
+			typeFilter = (params.get('type') as UserType | 'all') || 'all';
+			const adminParam = params.get('admin');
+			adminFilter = adminParam === null ? 'all' : adminParam === 'true';
+			// Save URL params to storage
+			saveToStorage();
+		} else {
+			// Otherwise load from sessionStorage
+			loadFromStorage();
+		}
+	}
+
 	onMount(async () => {
+		initializeFromURL();
 		await loadUsers();
 	});
 
@@ -153,25 +221,26 @@
 				type="text"
 				placeholder="Buscar usuarios por email, nombre o teléfono..."
 				bind:value={searchTerm}
+				on:input={() => updateURL()}
 				class="search-input"
 			/>
 		</div>
 
 		<div class="filters-container">
-			<select bind:value={typeFilter} class="filter-select">
+			<select bind:value={typeFilter} class="filter-select" on:change={() => updateURL()}>
 				<option value="all">Todos los tipos</option>
 				<option value="normal">Pacientes</option>
 				<option value="pediatrician">Pediatras</option>
 			</select>
 
-			<select bind:value={adminFilter} class="filter-select">
+			<select bind:value={adminFilter} class="filter-select" on:change={() => updateURL()}>
 				<option value="all">Todos los roles</option>
 				<option value={true}>Solo Administradores</option>
 				<option value={false}>Solo Usuarios</option>
 			</select>
 		</div>
 
-		<button class="create-btn" on:click={() => (window.location.href = '/users/create')}>
+		<button class="create-btn" on:click={() => goto('/users/create')}>
 			<svg viewBox="0 0 24 24">
 				<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 			</svg>
@@ -284,8 +353,7 @@
 										</button>
 										<button
 											class="action-btn edit"
-											on:click={() =>
-												(window.location.href = `/users/${user.id}/edit`)}
+											on:click={() => goto(`/users/${user.id}/edit`)}
 											title="Editar"
 										>
 											<svg viewBox="0 0 24 24">
@@ -488,7 +556,7 @@
 						on:click={() => {
 							if (selectedUser) {
 								closeDetails();
-								window.location.href = `/users/${selectedUser.id}/edit`;
+								goto(`/users/${selectedUser.id}/edit`);
 							}
 						}}
 					>

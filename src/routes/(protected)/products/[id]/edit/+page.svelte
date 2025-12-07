@@ -282,8 +282,7 @@
 			}
 		}
 
-		// Price validation only applies to non-package products
-		if (formData.type !== 'package' && formData.price !== null && formData.price !== undefined && formData.price < 0) {
+		if (formData.price !== null && formData.price !== undefined && formData.price < 0) {
 			errors.price = 'El precio debe ser un número válido';
 		}
 
@@ -377,9 +376,10 @@
 		}
 		if (!validateForm()) {
 			const errorCount = Object.keys(errors).length;
-			const errorMessage = errorCount === 1 
-				? 'Por favor, corrige el campo requerido antes de continuar'
-				: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
+			const errorMessage =
+				errorCount === 1
+					? 'Por favor, corrige el campo requerido antes de continuar'
+					: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
 			toastStore.error(errorMessage);
 			// Scroll to first error
 			const firstErrorField = Object.keys(errors)[0];
@@ -421,8 +421,7 @@
 			const updateData = {
 				...formData,
 				updatedAt: serverTimestamp(),
-				// Programs don't have prices
-				price: formData.type === 'package' ? null : (formData.price !== undefined ? Number(formData.price) : null),
+				price: formData.price !== undefined ? Number(formData.price) : null,
 				minAge: Number(formData.minAge || 0),
 				maxAge: Number(formData.maxAge || 18),
 				ageUnit: formData.ageUnit || 'months', // Ensure ageUnit is always set
@@ -582,27 +581,33 @@
 				</div>
 
 				<!-- Pricing -->
-				{#if formData.type !== 'package'}
-					<div class="form-section">
-						<h3>Precios</h3>
+				<div class="form-section">
+					<h3>Precios</h3>
 
-						<div class="form-group">
-							<label for="price">Precio por Dosis</label>
-							<input
-								id="price"
-								type="number"
-								bind:value={formData.price}
-								min="0"
-								step="0.01"
-								placeholder="0.00"
-								class:error={errors.price}
-							/>
-							{#if errors.price}
-								<span class="error-text">{errors.price}</span>
+					<div class="form-group">
+						<label for="price">
+							{#if formData.type === 'bundle'}
+								Precio por Paquete
+							{:else if formData.type === 'package'}
+								Precio General
+							{:else}
+								Precio por Dosis
 							{/if}
-						</div>
+						</label>
+						<input
+							id="price"
+							type="number"
+							bind:value={formData.price}
+							min="0"
+							step="0.01"
+							placeholder="0.00"
+							class:error={errors.price}
+						/>
+						{#if errors.price}
+							<span class="error-text">{errors.price}</span>
+						{/if}
 					</div>
-				{/if}
+				</div>
 
 				<!-- Age Range -->
 				<div class="form-section">
@@ -618,7 +623,11 @@
 
 					<div class="form-row">
 						<div class="form-group">
-							<label for="minAge">Edad Mínima ({formData.ageUnit === 'months' ? 'meses' : 'años'})</label>
+							<label for="minAge"
+								>Edad Mínima ({formData.ageUnit === 'months'
+									? 'meses'
+									: 'años'})</label
+							>
 							<input
 								id="minAge"
 								type="number"
@@ -629,7 +638,11 @@
 						</div>
 
 						<div class="form-group">
-							<label for="maxAge">Edad Máxima ({formData.ageUnit === 'months' ? 'meses' : 'años'})</label>
+							<label for="maxAge"
+								>Edad Máxima ({formData.ageUnit === 'months'
+									? 'meses'
+									: 'años'})</label
+							>
 							<input
 								id="maxAge"
 								type="number"

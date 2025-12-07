@@ -4,6 +4,7 @@
 	import { db, storage } from '$lib/firebase/vaqmas';
 	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -162,7 +163,7 @@
 	<title>Crear Artículo - VAQ+ Admin</title>
 </svelte:head>
 
-<div class="create-article-container">
+<div class="create-article-container" in:fly={{ y: 20, duration: 300, opacity: 0 }}>
 	<div class="page-header">
 		<h1>Crear Nuevo Artículo</h1>
 		<p>Agregar un nuevo artículo educativo o informativo</p>

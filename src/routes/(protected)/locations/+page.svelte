@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { Location } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
@@ -10,7 +12,63 @@
 	let selectedLocation: Location | null = null;
 	let showDetails = false;
 
+	const STORAGE_KEY = 'locations-filters';
+
+	// Save to sessionStorage
+	function saveToStorage() {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					searchTerm,
+				}),
+			);
+		}
+	}
+
+	// Load from sessionStorage
+	function loadFromStorage() {
+		if (typeof window !== 'undefined') {
+			const stored = sessionStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					searchTerm = parsed.searchTerm || '';
+				} catch (e) {
+					console.error('Error loading from sessionStorage:', e);
+				}
+			}
+		}
+	}
+
+	// Update URL and sessionStorage when search changes
+	function updateURL() {
+		const params = new URLSearchParams();
+		if (searchTerm) params.set('search', searchTerm);
+
+		const queryString = params.toString();
+		const newUrl = queryString ? `${$page.url.pathname}?${queryString}` : $page.url.pathname;
+		goto(newUrl, { replaceState: true, noScroll: true });
+		saveToStorage();
+	}
+
+	// Initialize from URL params (priority) or sessionStorage
+	function initializeFromURL() {
+		const params = $page.url.searchParams;
+
+		// URL params take priority if they exist
+		if (params.has('search')) {
+			searchTerm = params.get('search') || '';
+			// Save URL params to storage
+			saveToStorage();
+		} else {
+			// Otherwise load from sessionStorage
+			loadFromStorage();
+		}
+	}
+
 	onMount(async () => {
+		initializeFromURL();
 		await loadLocations();
 	});
 
@@ -102,11 +160,12 @@
 				type="text"
 				placeholder="Buscar ubicaciones por nombre o dirección..."
 				bind:value={searchTerm}
+				on:input={() => updateURL()}
 				class="search-input"
 			/>
 		</div>
 
-		<button class="create-btn" on:click={() => (window.location.href = '/locations/create')}>
+		<button class="create-btn" on:click={() => goto('/locations/create')}>
 			<svg viewBox="0 0 24 24">
 				<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 			</svg>
@@ -188,8 +247,7 @@
 										</button>
 										<button
 											class="action-btn edit"
-											on:click={() =>
-												(window.location.href = `/locations/${location.id}/edit`)}
+											on:click={() => goto(`/locations/${location.id}/edit`)}
 											title="Editar"
 										>
 											<svg viewBox="0 0 24 24">
@@ -300,7 +358,7 @@
 						on:click={() => {
 							if (selectedLocation) {
 								closeDetails();
-								window.location.href = `/locations/${selectedLocation.id}/edit`;
+								goto(`/locations/${selectedLocation.id}/edit`);
 							}
 						}}
 					>

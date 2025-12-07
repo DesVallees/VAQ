@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { Article, ArticleCategory } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
@@ -12,7 +14,67 @@
 	let selectedArticle: (Article & { resolvedImageUrl: string }) | null = null;
 	let showDetails = false;
 
+	const STORAGE_KEY = 'articles-filters';
+
+	// Save to sessionStorage
+	function saveToStorage() {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					searchTerm,
+					categoryFilter,
+				}),
+			);
+		}
+	}
+
+	// Load from sessionStorage
+	function loadFromStorage() {
+		if (typeof window !== 'undefined') {
+			const stored = sessionStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					searchTerm = parsed.searchTerm || '';
+					categoryFilter = parsed.categoryFilter || 'all';
+				} catch (e) {
+					console.error('Error loading from sessionStorage:', e);
+				}
+			}
+		}
+	}
+
+	// Update URL and sessionStorage when filters change
+	function updateURL() {
+		const params = new URLSearchParams();
+		if (searchTerm) params.set('search', searchTerm);
+		if (categoryFilter !== 'all') params.set('category', categoryFilter);
+
+		const queryString = params.toString();
+		const newUrl = queryString ? `${$page.url.pathname}?${queryString}` : $page.url.pathname;
+		goto(newUrl, { replaceState: true, noScroll: true });
+		saveToStorage();
+	}
+
+	// Initialize from URL params (priority) or sessionStorage
+	function initializeFromURL() {
+		const params = $page.url.searchParams;
+
+		// URL params take priority if they exist
+		if (params.has('search') || params.has('category')) {
+			searchTerm = params.get('search') || '';
+			categoryFilter = (params.get('category') as ArticleCategory | 'all') || 'all';
+			// Save URL params to storage
+			saveToStorage();
+		} else {
+			// Otherwise load from sessionStorage
+			loadFromStorage();
+		}
+	}
+
 	onMount(async () => {
+		initializeFromURL();
 		await loadArticles();
 	});
 
@@ -166,12 +228,13 @@
 				type="text"
 				placeholder="Buscar artículos por título, resumen o autor..."
 				bind:value={searchTerm}
+				on:input={() => updateURL()}
 				class="search-input"
 			/>
 		</div>
 
 		<div class="filters-container">
-			<select bind:value={categoryFilter} class="filter-select">
+			<select bind:value={categoryFilter} class="filter-select" on:change={() => updateURL()}>
 				<option value="all">Todas las categorías</option>
 				{#each categories as category}
 					<option value={category}>{formatCategory(category)}</option>
@@ -179,7 +242,7 @@
 			</select>
 		</div>
 
-		<button class="create-btn" on:click={() => (window.location.href = '/articles/create')}>
+		<button class="create-btn" on:click={() => goto('/articles/create')}>
 			<svg viewBox="0 0 24 24">
 				<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 			</svg>
@@ -301,8 +364,7 @@
 										</button>
 										<button
 											class="action-btn edit"
-											on:click={() =>
-												(window.location.href = `/articles/${article.id}/edit`)}
+											on:click={() => goto(`/articles/${article.id}/edit`)}
 											title="Editar"
 										>
 											<svg viewBox="0 0 24 24">
@@ -516,7 +578,7 @@
 						on:click={() => {
 							if (selectedArticle) {
 								closeDetails();
-								window.location.href = `/articles/${selectedArticle.id}/edit`;
+								goto(`/articles/${selectedArticle.id}/edit`);
 							}
 						}}
 					>

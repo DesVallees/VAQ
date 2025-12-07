@@ -20,9 +20,6 @@ export interface BaseProduct extends BaseDocument {
     commonName: string;
     description: string;
     price: number | null;
-    priceAvacunar: number | null;
-    priceVita: number | null;
-    priceColsanitas: number | null;
     imageUrl: string;
     applicableDoctors: string[];
     minAge: number;
@@ -256,9 +253,6 @@ export interface BaseProductFormData {
     commonName: string;
     description: string;
     price: number | null;
-    priceAvacunar: number | null;
-    priceVita: number | null;
-    priceColsanitas: number | null;
     imageUrl: string;
     applicableDoctors: string[];
     minAge: number;

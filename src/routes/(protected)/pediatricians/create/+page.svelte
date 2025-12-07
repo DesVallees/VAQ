@@ -3,6 +3,7 @@
 	import type { Pediatrician, UserType } from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -143,7 +144,7 @@
 	<title>Crear Pediatra - VAQ+ Admin</title>
 </svelte:head>
 
-<div class="create-pediatrician-container">
+<div class="create-pediatrician-container" in:fly={{ y: 20, duration: 300, opacity: 0 }}>
 	<div class="page-header">
 		<h1>Crear Nuevo Pediatra</h1>
 		<p>Registrar un nuevo perfil de pediatra</p>

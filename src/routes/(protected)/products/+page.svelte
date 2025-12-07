@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { Product, ProductType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, collection, deleteDoc, doc } from 'firebase/firestore';
@@ -7,12 +9,87 @@
 
 	let products: Product[] = [];
 	let loading = true;
+
+	// Initialize from sessionStorage, URL params, or defaults
 	let searchTerm = '';
 	let selectedType: ProductType | 'all' = 'all';
 	let sortBy: 'name' | 'price' | 'date' | 'type' = 'type';
 	let sortOrder: 'asc' | 'desc' = 'asc';
 
+	const STORAGE_KEY = 'products-filters';
+
+	// Save to sessionStorage
+	function saveToStorage() {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					searchTerm,
+					selectedType,
+					sortBy,
+					sortOrder,
+				}),
+			);
+		}
+	}
+
+	// Load from sessionStorage
+	function loadFromStorage() {
+		if (typeof window !== 'undefined') {
+			const stored = sessionStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					searchTerm = parsed.searchTerm || '';
+					selectedType = parsed.selectedType || 'all';
+					sortBy = parsed.sortBy || 'type';
+					sortOrder = parsed.sortOrder || 'asc';
+				} catch (e) {
+					console.error('Error loading from sessionStorage:', e);
+				}
+			}
+		}
+	}
+
+	// Update URL and sessionStorage when filters/sort change
+	function updateURL() {
+		const params = new URLSearchParams();
+		if (searchTerm) params.set('search', searchTerm);
+		if (selectedType !== 'all') params.set('type', selectedType);
+		if (sortBy !== 'type') params.set('sortBy', sortBy);
+		if (sortOrder !== 'asc') params.set('sortOrder', sortOrder);
+
+		const queryString = params.toString();
+		const newUrl = queryString ? `${$page.url.pathname}?${queryString}` : $page.url.pathname;
+		goto(newUrl, { replaceState: true, noScroll: true });
+		saveToStorage();
+	}
+
+	// Initialize from URL params (priority) or sessionStorage
+	function initializeFromURL() {
+		const params = $page.url.searchParams;
+
+		// URL params take priority if they exist
+		if (
+			params.has('search') ||
+			params.has('type') ||
+			params.has('sortBy') ||
+			params.has('sortOrder')
+		) {
+			searchTerm = params.get('search') || '';
+			selectedType = (params.get('type') as ProductType | 'all') || 'all';
+			sortBy = (params.get('sortBy') as 'name' | 'price' | 'date' | 'type') || 'type';
+			sortOrder = (params.get('sortOrder') as 'asc' | 'desc') || 'asc';
+			// Save URL params to storage
+			saveToStorage();
+		} else {
+			// Otherwise load from sessionStorage
+			loadFromStorage();
+		}
+	}
+
 	onMount(async () => {
+		initializeFromURL();
 		await loadProducts();
 	});
 
@@ -167,11 +244,21 @@
 				type="text"
 				placeholder="Buscar productos..."
 				bind:value={searchTerm}
+				on:input={() => updateURL()}
 				class="search-input"
 			/>
 		</div>
 
-		<button class="create-btn" on:click={() => (window.location.href = '/products/create')}>
+		<button
+			class="create-btn"
+			on:click={() => {
+				const url =
+					selectedType !== 'all'
+						? `/products/create?type=${selectedType}`
+						: '/products/create';
+				goto(url);
+			}}
+		>
 			<svg viewBox="0 0 24 24">
 				<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 			</svg>
@@ -187,28 +274,40 @@
 				<button
 					class="filter-btn"
 					class:active={selectedType === 'all'}
-					on:click={() => (selectedType = 'all')}
+					on:click={() => {
+						selectedType = 'all';
+						updateURL();
+					}}
 				>
 					Todos
 				</button>
 				<button
 					class="filter-btn"
 					class:active={selectedType === 'vaccine'}
-					on:click={() => (selectedType = 'vaccine')}
+					on:click={() => {
+						selectedType = 'vaccine';
+						updateURL();
+					}}
 				>
 					Vacunas
 				</button>
 				<button
 					class="filter-btn"
 					class:active={selectedType === 'bundle'}
-					on:click={() => (selectedType = 'bundle')}
+					on:click={() => {
+						selectedType = 'bundle';
+						updateURL();
+					}}
 				>
 					Paquetes
 				</button>
 				<button
 					class="filter-btn"
 					class:active={selectedType === 'package'}
-					on:click={() => (selectedType = 'package')}
+					on:click={() => {
+						selectedType = 'package';
+						updateURL();
+					}}
 				>
 					Programas
 				</button>
@@ -217,7 +316,7 @@
 
 		<div class="sort-group">
 			<label class="control-label">Ordenar por:</label>
-			<select class="sort-select" bind:value={sortBy}>
+			<select class="sort-select" bind:value={sortBy} on:change={() => updateURL()}>
 				<option value="name">Nombre</option>
 				<option value="type">Tipo</option>
 				<option value="price">Precio</option>
@@ -225,7 +324,10 @@
 			</select>
 			<button
 				class="sort-order-btn"
-				on:click={() => (sortOrder = sortOrder === 'asc' ? 'desc' : 'asc')}
+				on:click={() => {
+					sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+					updateURL();
+				}}
 				title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
 			>
 				<svg viewBox="0 0 24 24" class:desc={sortOrder === 'desc'}>
@@ -293,11 +395,7 @@
 										{formatType(product.type)}
 									</span>
 								</td>
-								<td class="col-price">
-									{product.type === 'package'
-										? 'N/A'
-										: formatPrice(product.price)}
-								</td>
+								<td class="col-price">{formatPrice(product.price)}</td>
 								<td class="col-age-min"
 									>{product.minAge}
 									{product.ageUnit === 'years' ? 'años' : 'meses'}</td
@@ -312,8 +410,7 @@
 									<div class="action-buttons">
 										<button
 											class="action-btn edit"
-											on:click={() =>
-												(window.location.href = `/products/${product.id}/edit`)}
+											on:click={() => goto(`/products/${product.id}/edit`)}
 											title="Editar"
 										>
 											<svg viewBox="0 0 24 24">

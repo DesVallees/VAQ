@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { Appointment, AppointmentStatus, AppointmentType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
@@ -12,7 +14,71 @@
 	let selectedAppointment: Appointment | null = null;
 	let showDetails = false;
 
+	const STORAGE_KEY = 'appointments-filters';
+
+	// Save to sessionStorage
+	function saveToStorage() {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(
+				STORAGE_KEY,
+				JSON.stringify({
+					searchTerm,
+					statusFilter,
+					dateFilter,
+				}),
+			);
+		}
+	}
+
+	// Load from sessionStorage
+	function loadFromStorage() {
+		if (typeof window !== 'undefined') {
+			const stored = sessionStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					searchTerm = parsed.searchTerm || '';
+					statusFilter = parsed.statusFilter || 'all';
+					dateFilter = parsed.dateFilter || 'all';
+				} catch (e) {
+					console.error('Error loading from sessionStorage:', e);
+				}
+			}
+		}
+	}
+
+	// Update URL and sessionStorage when filters change
+	function updateURL() {
+		const params = new URLSearchParams();
+		if (searchTerm) params.set('search', searchTerm);
+		if (statusFilter !== 'all') params.set('status', statusFilter);
+		if (dateFilter !== 'all') params.set('date', dateFilter);
+
+		const queryString = params.toString();
+		const newUrl = queryString ? `${$page.url.pathname}?${queryString}` : $page.url.pathname;
+		goto(newUrl, { replaceState: true, noScroll: true });
+		saveToStorage();
+	}
+
+	// Initialize from URL params (priority) or sessionStorage
+	function initializeFromURL() {
+		const params = $page.url.searchParams;
+
+		// URL params take priority if they exist
+		if (params.has('search') || params.has('status') || params.has('date')) {
+			searchTerm = params.get('search') || '';
+			statusFilter = (params.get('status') as AppointmentStatus | 'all') || 'all';
+			dateFilter = params.get('date') || 'all';
+			// Save URL params to storage
+			saveToStorage();
+		} else {
+			// Otherwise load from sessionStorage
+			loadFromStorage();
+		}
+	}
+
 	onMount(async () => {
+		initializeFromURL();
 		await loadAppointments();
 	});
 
@@ -298,12 +364,13 @@
 				type="text"
 				placeholder="Buscar citas por paciente, ubicación o motivo..."
 				bind:value={searchTerm}
+				on:input={() => updateURL()}
 				class="search-input"
 			/>
 		</div>
 
 		<div class="filters-container">
-			<select bind:value={statusFilter} class="filter-select">
+			<select bind:value={statusFilter} class="filter-select" on:change={() => updateURL()}>
 				<option value="all">Todos los estados</option>
 				<option value="scheduled">Programada</option>
 				<option value="pending">Pendiente</option>
@@ -314,7 +381,7 @@
 				<option value="rescheduled">Reprogramada</option>
 			</select>
 
-			<select bind:value={dateFilter} class="filter-select">
+			<select bind:value={dateFilter} class="filter-select" on:change={() => updateURL()}>
 				<option value="all">Todas las fechas</option>
 				<option value="today">Hoy</option>
 				<option value="week">Esta semana</option>
@@ -322,7 +389,7 @@
 			</select>
 		</div>
 
-		<button class="create-btn" on:click={() => (window.location.href = '/appointments/create')}>
+		<button class="create-btn" on:click={() => goto('/appointments/create')}>
 			<svg viewBox="0 0 24 24">
 				<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 			</svg>
@@ -429,7 +496,7 @@
 										<button
 											class="action-btn edit"
 											on:click={() =>
-												(window.location.href = `/appointments/${appointment.id}/edit`)}
+												goto(`/appointments/${appointment.id}/edit`)}
 											title="Editar"
 										>
 											<svg viewBox="0 0 24 24">
@@ -618,7 +685,7 @@
 						on:click={() => {
 							if (selectedAppointment) {
 								closeDetails();
-								window.location.href = `/appointments/${selectedAppointment.id}/edit`;
+								goto(`/appointments/${selectedAppointment.id}/edit`);
 							}
 						}}
 					>

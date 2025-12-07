@@ -3,6 +3,7 @@
 	import type { User, UserType } from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -106,7 +107,7 @@
 	<title>Crear Usuario - VAQ+ Admin</title>
 </svelte:head>
 
-<div class="create-user-container">
+<div class="create-user-container" in:fly={{ y: 20, duration: 300, opacity: 0 }}>
 	<div class="page-header">
 		<h1>Crear Nuevo Usuario</h1>
 		<p>Registrar una nueva cuenta de usuario</p>

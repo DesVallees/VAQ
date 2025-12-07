@@ -3,6 +3,7 @@
 	import type { Location } from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -84,7 +85,7 @@
 	<title>Crear Ubicación - VAQ+ Admin</title>
 </svelte:head>
 
-<div class="create-location-container">
+<div class="create-location-container" in:fly={{ y: 20, duration: 300, opacity: 0 }}>
 	<div class="page-header">
 		<h1>Crear Nueva Ubicación</h1>
 		<p>Agregar una nueva clínica o ubicación</p>

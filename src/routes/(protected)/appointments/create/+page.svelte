@@ -12,6 +12,7 @@
 	import { db } from '$lib/firebase/vaqmas';
 	import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -161,9 +162,6 @@
 						commonName: data.commonName || '',
 						description: data.description || '',
 						price: data.price || null,
-						priceAvacunar: data.priceAvacunar || null,
-						priceVita: data.priceVita || null,
-						priceColsanitas: data.priceColsanitas || null,
 						imageUrl: data.imageUrl || '',
 						applicableDoctors: data.applicableDoctors || [],
 						minAge: data.minAge || 0,
@@ -270,9 +268,10 @@
 	const handleSubmit = async () => {
 		if (!validateForm()) {
 			const errorCount = Object.keys(errors).length;
-			const errorMessage = errorCount === 1 
-				? 'Por favor, corrige el campo requerido antes de continuar'
-				: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
+			const errorMessage =
+				errorCount === 1
+					? 'Por favor, corrige el campo requerido antes de continuar'
+					: `Por favor, corrige los ${errorCount} campos requeridos antes de continuar`;
 			toastStore.error(errorMessage);
 			// Scroll to first error
 			const firstErrorField = Object.keys(errors)[0];
@@ -341,7 +340,7 @@
 	<title>Crear Cita - VAQ+ Admin</title>
 </svelte:head>
 
-<div class="create-appointment-container">
+<div class="create-appointment-container" in:fly={{ y: 20, duration: 300, opacity: 0 }}>
 	<div class="page-header">
 		<h1>Crear Nueva Cita</h1>
 		<p>Programar una nueva cita médica</p>
