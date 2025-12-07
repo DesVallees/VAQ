@@ -2,11 +2,12 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import type { Appointment, AppointmentStatus, AppointmentType } from '../../types';
+	import type { Appointment, AppointmentStatus, AppointmentType, Product } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
 
 	let appointments: Appointment[] = [];
+	let products: Product[] = [];
 	let loading = true;
 	let searchTerm = '';
 	let statusFilter: AppointmentStatus | 'all' = 'all';
@@ -79,8 +80,41 @@
 
 	onMount(async () => {
 		initializeFromURL();
-		await loadAppointments();
+		await Promise.all([loadAppointments(), loadProducts()]);
 	});
+
+	const loadProducts = async () => {
+		try {
+			const productsSnapshot = await getDocs(collection(db, 'products'));
+			products = productsSnapshot.docs.map((doc) => {
+				const data = doc.data();
+				return {
+					id: doc.id,
+					type: data.type || 'vaccine',
+					name: data.name || '',
+					commonName: data.commonName || '',
+					description: data.description || '',
+					price: data.price || null,
+					imageUrl: data.imageUrl || '',
+					applicableDoctors: data.applicableDoctors || [],
+					minAge: data.minAge || 0,
+					maxAge: data.maxAge || 18,
+					specialIndications: data.specialIndications || null,
+					manufacturer: data.manufacturer || null,
+					dosageInfo: data.dosageInfo || null,
+					targetDiseases: data.targetDiseases || null,
+					dosesAndBoosters: data.dosesAndBoosters || null,
+					includedProductIds: data.includedProductIds || null,
+					includedDoseBundles: data.includedDoseBundles || null,
+					targetMilestone: data.targetMilestone || null,
+					createdAt: data.createdAt?.toDate() || new Date(),
+					updatedAt: data.updatedAt?.toDate() || new Date(),
+				} as Product;
+			});
+		} catch (error) {
+			console.error('Error loading products:', error);
+		}
+	};
 
 	const loadAppointments = async () => {
 		loading = true;
@@ -91,18 +125,6 @@
 
 			appointments = appointmentsSnapshot.docs.map((doc) => {
 				const data = doc.data();
-
-				// Debug logging for the first few documents
-				if (appointmentsSnapshot.docs.indexOf(doc) < 3) {
-					console.log('Document data for appointment', doc.id, ':', {
-						dateTime: data.dateTime,
-						dateTimeType: typeof data.dateTime,
-						dateTimeConstructor: data.dateTime?.constructor?.name,
-						hasToDate: typeof data.dateTime === 'object' && data.dateTime?.toDate,
-						createdAt: data.createdAt,
-						createdAtType: typeof data.createdAt,
-					});
-				}
 
 				// Handle dateTime field - could be Firestore Timestamp, Date, or string
 				let dateTime: Date;
@@ -155,6 +177,8 @@
 					...data,
 					dateTime,
 					createdAt,
+					paymentStatus: data.paymentStatus || null,
+					paymentRef: data.paymentRef || null,
 				} as Appointment;
 			});
 		} catch (error) {
@@ -281,6 +305,28 @@
 
 	const getStatusBadgeClass = (status: AppointmentStatus) => {
 		return `status-badge status-${status}`;
+	};
+
+	const getProductName = (productId: string) => {
+		const product = products.find((p) => p.id === productId);
+		return product ? product.name : 'Producto no encontrado';
+	};
+
+	const formatPaymentStatus = (paymentStatus: string | null) => {
+		if (!paymentStatus) return 'Sin estado de pago';
+		// Handle both formats: "none" and "PaymentStatus.none"
+		const cleanStatus = paymentStatus.includes('.')
+			? paymentStatus.split('.').pop() || paymentStatus
+			: paymentStatus;
+
+		const statusMap: Record<string, string> = {
+			none: 'Sin pago',
+			pending: 'Pendiente',
+			completed: 'Completado',
+			failed: 'Fallido',
+			refunded: 'Reembolsado',
+		};
+		return statusMap[cleanStatus] || cleanStatus;
 	};
 
 	// Filter appointments based on search and filters
@@ -655,6 +701,17 @@
 									{formatStatus(selectedAppointment.status)}
 								</span>
 							</div>
+							<div class="detail-item">
+								<label>Estado de Pago:</label>
+								<span>{formatPaymentStatus(selectedAppointment.paymentStatus)}</span
+								>
+							</div>
+							{#if selectedAppointment.paymentRef}
+								<div class="detail-item">
+									<label>Referencia de Pago:</label>
+									<span>{selectedAppointment.paymentRef}</span>
+								</div>
+							{/if}
 						</div>
 						{#if selectedAppointment.notes}
 							<div class="detail-item full-width">
@@ -664,28 +721,29 @@
 						{/if}
 					</div>
 
-					<div class="detail-section">
-						<h3>Ubicación</h3>
-						<div class="detail-grid">
-							<div class="detail-item">
-								<label>Clínica:</label>
-								<span>{selectedAppointment.locationName}</span>
-							</div>
-							<div class="detail-item">
-								<label>Dirección:</label>
-								<span>{selectedAppointment.locationAddress}</span>
+					{#if selectedAppointment.productIds && selectedAppointment.productIds.length > 0}
+						<div class="detail-section">
+							<h3>Productos Aplicados</h3>
+							<div class="products-list">
+								{#each selectedAppointment.productIds as productId}
+									<div class="product-item">
+										<span class="product-name">{getProductName(productId)}</span
+										>
+									</div>
+								{/each}
 							</div>
 						</div>
-					</div>
+					{/if}
 				</div>
 				<div class="modal-footer">
 					<button class="btn btn-secondary" on:click={closeDetails}>Cerrar</button>
 					<button
 						class="btn btn-primary"
 						on:click={() => {
-							if (selectedAppointment) {
+							const appointmentId = selectedAppointment?.id;
+							if (appointmentId) {
 								closeDetails();
-								goto(`/appointments/${selectedAppointment.id}/edit`);
+								goto(`/appointments/${appointmentId}/edit`);
 							}
 						}}
 					>
@@ -944,6 +1002,24 @@
 	.detail-item span {
 		color: var(--neutral-900);
 		font-size: var(--font-size-base);
+	}
+
+	.products-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-2);
+	}
+
+	.product-item {
+		padding: var(--spacing-3);
+		background-color: var(--neutral-50);
+		border-radius: var(--radius-md);
+		border-left: 3px solid var(--primary-500);
+	}
+
+	.product-name {
+		font-weight: var(--font-weight-medium);
+		color: var(--neutral-800);
 	}
 
 	.modal-footer {

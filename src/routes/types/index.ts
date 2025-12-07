@@ -144,6 +144,8 @@ export interface Appointment extends BaseDocument {
     notes: string | null;
     createdByUserId: string | null;
     lastUpdatedAt: Date | null;
+    paymentStatus: string | null;
+    paymentRef: string | null;
 }
 
 // Medical History types

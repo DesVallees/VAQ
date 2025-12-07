@@ -21,6 +21,7 @@
 	} from 'firebase/firestore';
 	import { onMount } from 'svelte';
 	import { toastStore } from '../../../../stores/toast';
+	import AutocompleteInput from '../../../../components/AutocompleteInput.svelte';
 
 	let loading = true;
 	let saving = false;
@@ -33,6 +34,7 @@
 	let pediatricians: Pediatrician[] = [];
 	let locations: Location[] = [];
 	let products: Product[] = [];
+	let availableProducts: Array<{ id: string; label: string; description?: string }> = [];
 
 	// Form data
 	let formData: Partial<Appointment> = {};
@@ -170,6 +172,20 @@
 						updatedAt: data.updatedAt?.toDate() || new Date(),
 					} as Product;
 				});
+
+			// Prepare products for AutocompleteInput
+			const productTypeLabels: Record<string, string> = {
+				vaccine: 'Vacuna',
+				bundle: 'Paquete',
+				package: 'Programa',
+			};
+			availableProducts = products.map((product) => ({
+				id: product.id,
+				label: product.name,
+				description: `${product.commonName} - ${
+					productTypeLabels[product.type] || product.type
+				}`,
+			}));
 		} catch (error) {
 			console.error('Error loading form data:', error);
 			errorMessage = 'Error al cargar los datos del formulario';
@@ -289,10 +305,19 @@
 					updatedAt,
 					lastUpdatedAt,
 					createdByUserId: data.createdByUserId || '',
+					paymentStatus: data.paymentStatus || null,
+					paymentRef: data.paymentRef || null,
 				} as Appointment;
 
-				// Initialize form data
-				formData = { ...appointment };
+				// Initialize form data - ensure all fields are properly set
+				formData = {
+					...appointment,
+					type: appointment.type || 'consultation',
+					status: appointment.status || 'scheduled',
+					productIds: appointment.productIds || [],
+					paymentStatus: appointment.paymentStatus || null,
+					paymentRef: appointment.paymentRef || null,
+				};
 			} else {
 				errorMessage = 'Cita no encontrada';
 			}
@@ -311,9 +336,10 @@
 			errors.patientId = 'Debe seleccionar un paciente';
 		}
 
-		if (!formData.doctorId) {
-			errors.doctorId = 'Debe seleccionar un doctor';
-		}
+		// Doctor is now optional
+		// if (!formData.doctorId) {
+		// 	errors.doctorId = 'Debe seleccionar un doctor';
+		// }
 
 		if (!formData.locationId) {
 			errors.locationId = 'Debe seleccionar una ubicación';
@@ -370,27 +396,16 @@
 		}
 	};
 
-	const handleProductChange = (e: Event) => {
-		const target = e.target as HTMLSelectElement;
-		if (target.value) {
-			addProduct(target.value);
-		}
-	};
-
-	const addProduct = (productId: string) => {
-		if (!formData.productIds?.includes(productId)) {
-			formData.productIds = [...(formData.productIds || []), productId];
+	const handleProductSelect = (event: CustomEvent) => {
+		const { option } = event.detail;
+		if (!formData.productIds?.includes(option.id)) {
+			formData.productIds = [...(formData.productIds || []), option.id];
 		}
 	};
 
 	const removeProduct = (productIdToRemove: string) => {
 		formData.productIds =
 			formData.productIds?.filter((id: string) => id !== productIdToRemove) || [];
-	};
-
-	const getProductName = (productId: string) => {
-		const product = products.find((p) => p.id === productId);
-		return product ? product.name : 'Producto no encontrado';
 	};
 
 	const handleSubmit = async () => {
@@ -435,6 +450,8 @@
 				productIds: formData.productIds,
 				status: formData.status,
 				notes: formData.notes,
+				paymentStatus: formData.paymentStatus || null,
+				paymentRef: formData.paymentRef || null,
 				updatedAt: serverTimestamp(),
 				lastUpdatedAt: serverTimestamp(),
 			};
@@ -539,7 +556,7 @@
 						</div>
 
 						<div class="form-group">
-							<label for="doctorId">Doctor *</label>
+							<label for="doctorId">Doctor</label>
 							<select
 								id="doctorId"
 								bind:value={formData.doctorId}
@@ -607,6 +624,30 @@
 
 					<div class="form-row">
 						<div class="form-group">
+							<label for="paymentStatus">Estado de Pago</label>
+							<select id="paymentStatus" bind:value={formData.paymentStatus}>
+								<option value="">Sin estado</option>
+								<option value="PaymentStatus.none">Sin pago</option>
+								<option value="PaymentStatus.pending">Pendiente</option>
+								<option value="PaymentStatus.completed">Completado</option>
+								<option value="PaymentStatus.failed">Fallido</option>
+								<option value="PaymentStatus.refunded">Reembolsado</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="paymentRef">Referencia de Pago</label>
+							<input
+								id="paymentRef"
+								type="text"
+								bind:value={formData.paymentRef}
+								placeholder="Número de referencia del pago"
+							/>
+						</div>
+					</div>
+
+					<div class="form-row">
+						<div class="form-group">
 							<label for="dateTime">Fecha y Hora *</label>
 							<input
 								id="dateTime"
@@ -639,36 +680,16 @@
 
 					<div class="form-group">
 						<label>Productos Relacionados</label>
-						<select on:change={handleProductChange}>
-							<option value="">Seleccionar producto</option>
-							{#each products as product}
-								<option value={product.id}>
-									{product.name} - {product.type}
-								</option>
-							{/each}
-						</select>
+						<AutocompleteInput
+							placeholder="Busca y selecciona productos relacionados con esta cita"
+							options={availableProducts}
+							selectedOptions={formData.productIds || []}
+							removeOption={removeProduct}
+							on:select={handleProductSelect}
+						/>
 						<p class="help-text">
-							Selecciona productos relacionados con esta cita (vacunas, medicamentos,
-							etc.)
+							Busca productos por nombre, ID o tipo y selecciónalos para esta cita
 						</p>
-
-						{#if formData.productIds && formData.productIds.length > 0}
-							<div class="selected-products">
-								<h4>Productos Seleccionados:</h4>
-								<div class="product-tags">
-									{#each formData.productIds as productId}
-										<span class="product-tag">
-											{getProductName(productId)}
-											<button
-												type="button"
-												on:click={() => removeProduct(productId)}
-												class="remove-product">×</button
-											>
-										</span>
-									{/each}
-								</div>
-							</div>
-						{/if}
 					</div>
 				</div>
 

@@ -46,7 +46,6 @@ export async function getImageUrl(fileName?: string, type?: string): Promise<str
 
     const folder = resolveFolder(type);
     const storagePath = `${folder}/${baseName}`;
-    console.log('storagePath', storagePath);
 
 
     try {

@@ -224,7 +224,6 @@
 			dbg(`${apptLabel}: snapshot size=${recentAppointments.size}`);
 			recentAppointments.forEach((doc) => {
 				const data = doc.data();
-				console.log('data', data);
 				try {
 					activities.push({
 						id: doc.id,
