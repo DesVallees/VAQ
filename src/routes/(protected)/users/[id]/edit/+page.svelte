@@ -190,10 +190,15 @@
 			errorMessage = 'Error al eliminar el usuario';
 		}
 	};
+
+	// Reactive title
+	$: pageTitle = user
+		? `Editar Usuario: ${user.displayName || user.email || 'Sin nombre'} - VAQ+ Admin`
+		: 'Editar Usuario - VAQ+ Admin';
 </script>
 
 <svelte:head>
-	<title>Editar Usuario - VAQ+ Admin</title>
+	<title>{pageTitle}</title>
 </svelte:head>
 
 <div class="edit-user-container">

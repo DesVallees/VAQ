@@ -45,8 +45,11 @@
 		// Bundle-specific fields
 		includedProductIds: [] as string[],
 		targetMilestone: null as string | null,
+		isHidden: false,
 		// Package-specific fields
 		includedDoseBundles: [] as string[],
+		canPayForWholeProgram: false,
+		oldPrice: null as number | null,
 	};
 
 	// Available options
@@ -61,6 +64,12 @@
 
 	// Validation
 	let errors: Record<string, string> = {};
+
+	// Clear price fields when toggle is turned off
+	$: if (formData.type === 'package' && !formData.canPayForWholeProgram) {
+		formData.price = null;
+		formData.oldPrice = null;
+	}
 
 	// Helper function to resolve storage folder based on product type
 	const resolveFolder = (type: ProductType): string => {
@@ -189,12 +198,49 @@
 			if (!formData.includedProductIds || formData.includedProductIds.length === 0) {
 				errors.includedProductIds = 'Debe incluir al menos un producto para el paquete';
 			}
+			// Validate oldPrice if provided
+			if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
+				if (formData.oldPrice < 0) {
+					errors.oldPrice = 'El precio anterior debe ser un número válido';
+				}
+				if (formData.oldPrice <= (formData.price || 0)) {
+					errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
+				}
+			}
+		}
+
+		// Validate oldPrice for vaccines if provided
+		if (formData.type === 'vaccine') {
+			if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
+				if (formData.oldPrice < 0) {
+					errors.oldPrice = 'El precio anterior debe ser un número válido';
+				}
+				if (formData.oldPrice <= (formData.price || 0)) {
+					errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
+				}
+			}
 		}
 
 		if (formData.type === 'package') {
 			if (!formData.includedDoseBundles || formData.includedDoseBundles.length === 0) {
 				errors.includedDoseBundles =
 					'Debe incluir al menos un paquete de dosis para el programa';
+			}
+			// Validate price when canPayForWholeProgram is enabled
+			if (formData.canPayForWholeProgram) {
+				if (formData.price === null || formData.price === undefined || formData.price < 0) {
+					errors.price =
+						'El precio es requerido cuando los usuarios pueden pagar por el programa completo';
+				}
+				// Validate oldPrice if provided
+				if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
+					if (formData.oldPrice < 0) {
+						errors.oldPrice = 'El precio anterior debe ser un número válido';
+					}
+					if (formData.oldPrice <= (formData.price || 0)) {
+						errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
+					}
+				}
 			}
 		}
 
@@ -287,7 +333,20 @@
 				...formData,
 				createdAt: serverTimestamp(),
 				updatedAt: serverTimestamp(),
-				price: formData.price !== undefined ? Number(formData.price) : null,
+				// Only save price/oldPrice for packages if toggle is enabled
+				price:
+					formData.type === 'package' && !formData.canPayForWholeProgram
+						? null
+						: formData.price !== undefined
+						? Number(formData.price)
+						: null,
+				// Save oldPrice for all product types (vaccines, bundles, and packages when toggle is enabled)
+				oldPrice:
+					formData.type === 'package' && !formData.canPayForWholeProgram
+						? null
+						: formData.oldPrice !== undefined && formData.oldPrice !== null
+						? Number(formData.oldPrice)
+						: null,
 				minAge: Number(formData.minAge || 0),
 				maxAge: Number(formData.maxAge || 18),
 				ageUnit: formData.ageUnit || 'months', // Ensure ageUnit is always set
@@ -399,36 +458,195 @@
 						<span class="error-text">{errors.description}</span>
 					{/if}
 				</div>
+
+				{#if formData.type === 'bundle'}
+					<div class="form-group">
+						<label class="switch-label">
+							<span class="switch-text"
+								>Ocultar paquete (solo visible en programas)</span
+							>
+							<label class="switch">
+								<input
+									type="checkbox"
+									bind:checked={formData.isHidden}
+									class="switch-input"
+								/>
+								<span class="switch-slider" />
+							</label>
+						</label>
+						<p class="help-text">
+							Si está oculto, el paquete solo se mostrará cuando esté incluido en un
+							programa. Si no está oculto, se mostrará en las pantallas de inicio y
+							tienda de la app.
+						</p>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Pricing -->
-			<div class="form-section">
-				<h3>Precios</h3>
+			{#if formData.type === 'package'}
+				<div class="form-section">
+					<h3>Precios</h3>
 
-				<div class="form-group">
-					<label for="price">
-						{#if formData.type === 'bundle'}
-							Precio por Paquete
-						{:else if formData.type === 'package'}
-							Precio General
-						{:else}
-							Precio por Dosis
-						{/if}
-					</label>
-					<input
-						id="price"
-						type="number"
-						bind:value={formData.price}
-						min="0"
-						step="0.01"
-						placeholder="0.00"
-						class:error={errors.price}
-					/>
-					{#if errors.price}
-						<span class="error-text">{errors.price}</span>
+					<div class="form-group">
+						<label class="switch-label">
+							<span class="switch-text"
+								>Los usuarios pueden pagar por el programa completo</span
+							>
+							<label class="switch">
+								<input
+									type="checkbox"
+									bind:checked={formData.canPayForWholeProgram}
+									class="switch-input"
+								/>
+								<span class="switch-slider" />
+							</label>
+						</label>
+						<p class="help-text">
+							Activa esta opción para permitir que los usuarios paguen por todo el
+							programa de una vez
+						</p>
+					</div>
+
+					{#if formData.canPayForWholeProgram}
+						<div class="price-fields">
+							<div class="form-group">
+								<label for="programPrice">Precio del Programa *</label>
+								<input
+									id="programPrice"
+									type="number"
+									bind:value={formData.price}
+									min="0"
+									step="0.01"
+									placeholder="0.00"
+									class:error={errors.price}
+								/>
+								{#if errors.price}
+									<span class="error-text">{errors.price}</span>
+								{/if}
+							</div>
+
+							<div class="form-group">
+								<label for="oldPrice">Precio Anterior (sin descuento)</label>
+								<input
+									id="oldPrice"
+									type="number"
+									bind:value={formData.oldPrice}
+									min="0"
+									step="0.01"
+									placeholder="0.00 (opcional)"
+									class:error={errors.oldPrice}
+								/>
+								<p class="help-text">
+									Precio original antes del descuento. Si se proporciona, se
+									mostrará el descuento en la app.
+								</p>
+								{#if errors.oldPrice}
+									<span class="error-text">{errors.oldPrice}</span>
+								{/if}
+							</div>
+
+							{#if formData.price !== null && formData.price !== undefined && formData.oldPrice !== null && formData.oldPrice !== undefined && formData.oldPrice > formData.price}
+								<div class="discount-preview">
+									<div class="discount-icon">
+										<svg
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<path d="M12 2L2 7l10 5 10-5-10-5z" />
+											<path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+										</svg>
+									</div>
+									<div class="discount-content">
+										<p class="discount-label">Vista previa</p>
+										<p class="discount-amount">
+											{Math.round(
+												((formData.oldPrice - formData.price) /
+													formData.oldPrice) *
+													100,
+											)}% de descuento
+										</p>
+									</div>
+								</div>
+							{/if}
+						</div>
 					{/if}
 				</div>
-			</div>
+			{:else}
+				<div class="form-section">
+					<h3>Precios</h3>
+
+					<div class="form-group">
+						<label for="price">
+							{#if formData.type === 'bundle'}
+								Precio por Paquete *
+							{:else}
+								Precio por Dosis *
+							{/if}
+						</label>
+						<input
+							id="price"
+							type="number"
+							bind:value={formData.price}
+							min="0"
+							step="0.01"
+							placeholder="0.00"
+							class:error={errors.price}
+							required
+						/>
+						{#if errors.price}
+							<span class="error-text">{errors.price}</span>
+						{/if}
+					</div>
+
+					<div class="form-group">
+						<label for="oldPrice">Precio Anterior (sin descuento)</label>
+						<input
+							id="oldPrice"
+							type="number"
+							bind:value={formData.oldPrice}
+							min="0"
+							step="0.01"
+							placeholder="0.00 (opcional)"
+							class:error={errors.oldPrice}
+						/>
+						<p class="help-text">
+							Precio original antes del descuento. Si se proporciona, se mostrará el
+							descuento en la app.
+						</p>
+						{#if errors.oldPrice}
+							<span class="error-text">{errors.oldPrice}</span>
+						{/if}
+					</div>
+
+					{#if formData.price !== null && formData.price !== undefined && formData.oldPrice !== null && formData.oldPrice !== undefined && formData.oldPrice > formData.price}
+						<div class="discount-preview">
+							<div class="discount-icon">
+								<svg
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
+									<path d="M12 2L2 7l10 5 10-5-10-5z" />
+									<path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+								</svg>
+							</div>
+							<div class="discount-content">
+								<p class="discount-label">Vista previa</p>
+								<p class="discount-amount">
+									{Math.round(
+										((formData.oldPrice - formData.price) / formData.oldPrice) *
+											100,
+									)}% de descuento
+								</p>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
 
 			<!-- Age Range -->
 			<div class="form-section">
@@ -931,6 +1149,158 @@
 
 	.btn-secondary:hover:not(:disabled) {
 		background-color: var(--color-secondary-dark);
+	}
+
+	/* Switch Toggle Styles */
+	.switch-label {
+		display: flex !important;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 1rem;
+		background: var(--color-background-light);
+		border: 2px solid var(--color-border);
+		border-radius: var(--border-radius);
+		transition: all 0.3s ease;
+		cursor: pointer;
+	}
+
+	.switch-label:hover {
+		border-color: var(--color-primary-light);
+		background: white;
+	}
+
+	.switch-text {
+		font-weight: 600;
+		color: var(--color-text-primary);
+		font-size: 0.9375rem;
+		flex: 1;
+	}
+
+	.switch {
+		position: relative;
+		display: inline-block;
+		width: 52px;
+		height: 28px;
+		flex-shrink: 0;
+	}
+
+	.switch-input {
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.switch-slider {
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: var(--neutral-300);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		border-radius: 28px;
+	}
+
+	.switch-slider:before {
+		position: absolute;
+		content: '';
+		height: 22px;
+		width: 22px;
+		left: 3px;
+		bottom: 3px;
+		background-color: white;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		border-radius: 50%;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	.switch-input:checked + .switch-slider {
+		background: linear-gradient(135deg, var(--color-primary) 0%, var(--secondary-500) 100%);
+	}
+
+	.switch-input:checked + .switch-slider:before {
+		transform: translateX(24px);
+	}
+
+	.switch-input:focus + .switch-slider {
+		box-shadow: 0 0 0 3px rgba(0, 170, 178, 0.2);
+	}
+
+	/* Price Fields Container */
+	.price-fields {
+		margin-top: 1.5rem;
+		padding-top: 1.5rem;
+		border-top: 2px solid var(--color-border);
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		animation: slideDown 0.3s ease-out;
+	}
+
+	@keyframes slideDown {
+		from {
+			opacity: 0;
+			transform: translateY(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Discount Preview */
+	.discount-preview {
+		margin-top: 0.5rem;
+		padding: 1.25rem;
+		background: linear-gradient(135deg, var(--primary-50) 0%, var(--secondary-50) 100%);
+		border-radius: var(--border-radius);
+		border: 2px solid var(--color-primary);
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		box-shadow: 0 2px 8px rgba(0, 170, 178, 0.1);
+	}
+
+	.discount-icon {
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
+		background: linear-gradient(135deg, var(--color-primary) 0%, var(--secondary-500) 100%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.discount-icon svg {
+		width: 24px;
+		height: 24px;
+		stroke: white;
+	}
+
+	.discount-content {
+		flex: 1;
+	}
+
+	.discount-label {
+		margin: 0 0 0.25rem 0;
+		font-size: 0.8125rem;
+		color: var(--color-text-secondary);
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.discount-amount {
+		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 700;
+		background: linear-gradient(135deg, var(--color-primary) 0%, var(--secondary-500) 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
 	}
 
 	@media (max-width: 768px) {

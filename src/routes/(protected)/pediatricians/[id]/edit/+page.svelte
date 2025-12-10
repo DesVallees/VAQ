@@ -203,10 +203,17 @@
 			errorMessage = 'Error al eliminar el pediatra';
 		}
 	};
+
+	// Reactive title
+	$: pageTitle = pediatrician
+		? `Editar Pediatra: ${
+				pediatrician.displayName || pediatrician.email || 'Sin nombre'
+		  } - VAQ+ Admin`
+		: 'Editar Pediatra - VAQ+ Admin';
 </script>
 
 <svelte:head>
-	<title>Editar Pediatra - VAQ+ Admin</title>
+	<title>{pageTitle}</title>
 </svelte:head>
 
 <div class="edit-pediatrician-container">

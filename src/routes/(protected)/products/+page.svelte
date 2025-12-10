@@ -188,6 +188,7 @@
 			);
 		})
 		.sort((a, b) => {
+			// First, apply the chosen sort
 			let comparison = 0;
 
 			switch (sortBy) {
@@ -211,7 +212,34 @@
 					break;
 			}
 
-			return sortOrder === 'asc' ? comparison : -comparison;
+			// Apply sort order
+			let primaryComparison = sortOrder === 'asc' ? comparison : -comparison;
+
+			// Then, if conditions are met, rearrange bundles by hidden status (non-hidden first)
+			// Only apply this if: selectedType is 'all' or 'bundle' AND sortBy is 'type'
+			const shouldSortByHidden =
+				(selectedType === 'all' || selectedType === 'bundle') && sortBy === 'type';
+
+			if (shouldSortByHidden) {
+				const aIsBundle = a.type === 'bundle';
+				const bIsBundle = b.type === 'bundle';
+
+				// If both are bundles, rearrange by hidden status after primary sort
+				if (aIsBundle && bIsBundle) {
+					const aIsHidden = Boolean(a.isHidden);
+					const bIsHidden = Boolean(b.isHidden);
+
+					// Non-hidden bundles come first (false < true)
+					if (aIsHidden !== bIsHidden) {
+						// Override primary comparison with hidden status
+						return aIsHidden ? 1 : -1;
+					}
+					// If both have same hidden status, use primary comparison
+				}
+			}
+
+			// Return the primary comparison
+			return primaryComparison;
 		});
 </script>
 

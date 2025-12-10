@@ -37,6 +37,9 @@ export interface BaseProduct extends BaseDocument {
     includedProductIds?: string[];
     includedDoseBundles?: string[];
     targetMilestone?: string | null;
+    isHidden?: boolean; // Optional: for bundles, if true, bundle is only shown when referenced by a program
+    canPayForWholeProgram?: boolean;
+    oldPrice?: number | null;
 }
 
 // Vaccine-specific interface
@@ -56,12 +59,15 @@ export interface DoseBundle extends BaseProduct {
     type: 'bundle';
     includedProductIds: string[]; // Required for bundles
     targetMilestone: string | null;
+    isHidden?: boolean; // Optional: if true, bundle is only shown when referenced by a program
 }
 
 // VaccinationProgram-specific interface
 export interface VaccinationProgram extends BaseProduct {
     type: 'package';
     includedDoseBundles: string[]; // Required for packages
+    canPayForWholeProgram?: boolean; // Optional: allows users to pay for the whole program
+    oldPrice?: number | null; // Optional: old price before discount
 }
 
 // Union type for all products
@@ -277,11 +283,14 @@ export interface DoseBundleFormData extends BaseProductFormData {
     type: 'bundle';
     includedProductIds: string[];
     targetMilestone: string | null;
+    isHidden?: boolean;
 }
 
 export interface VaccinationProgramFormData extends BaseProductFormData {
     type: 'package';
     includedDoseBundles: string[];
+    canPayForWholeProgram?: boolean;
+    oldPrice?: number | null;
 }
 
 export type ProductFormData = VaccineFormData | DoseBundleFormData | VaccinationProgramFormData;

@@ -144,10 +144,15 @@
 			errorMessage = 'Error al eliminar la ubicación';
 		}
 	};
+
+	// Reactive title
+	$: pageTitle = location
+		? `Editar Ubicación: ${location.name} - VAQ+ Admin`
+		: 'Editar Ubicación - VAQ+ Admin';
 </script>
 
 <svelte:head>
-	<title>Editar Ubicación - VAQ+ Admin</title>
+	<title>{pageTitle}</title>
 </svelte:head>
 
 <div class="edit-location-container">

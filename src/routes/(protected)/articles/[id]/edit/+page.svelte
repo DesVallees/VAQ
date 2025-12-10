@@ -261,10 +261,15 @@
 			errorMessage = 'Error al eliminar el artículo';
 		}
 	};
+
+	// Reactive title
+	$: pageTitle = article
+		? `Editar Artículo: ${article.title} - VAQ+ Admin`
+		: 'Editar Artículo - VAQ+ Admin';
 </script>
 
 <svelte:head>
-	<title>Editar Artículo - VAQ+ Admin</title>
+	<title>{pageTitle}</title>
 </svelte:head>
 
 <div class="edit-article-container">

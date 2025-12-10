@@ -498,10 +498,15 @@
 			errorMessage = 'Error al eliminar la cita';
 		}
 	};
+
+	// Reactive title
+	$: pageTitle = appointment
+		? `Editar Cita: ${appointment.patientName || 'Sin nombre'} - VAQ+ Admin`
+		: 'Editar Cita - VAQ+ Admin';
 </script>
 
 <svelte:head>
-	<title>Editar Cita - VAQ+ Admin</title>
+	<title>{pageTitle}</title>
 </svelte:head>
 
 <div class="edit-appointment-container">
