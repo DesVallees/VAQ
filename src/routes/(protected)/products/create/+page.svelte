@@ -9,6 +9,18 @@
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { getImageUrl } from '../../../lib/utils/imageUtils';
+	import {
+		validateOldPrice,
+		normalizeProductPrices,
+		normalizeAgeUnit,
+		addUniqueId,
+		removeId,
+		handleEnterToAddId,
+		handleAutocompleteSelect,
+		resolveProductFolder,
+		deleteProductImage,
+	} from '../../../lib/utils/productFormUtils';
+	import DiscountPreview from '../../../components/DiscountPreview.svelte';
 	import { toastStore } from '../../../stores/toast';
 
 	let loading = false;
@@ -71,15 +83,6 @@
 		formData.oldPrice = null;
 	}
 
-	// Helper function to resolve storage folder based on product type
-	const resolveFolder = (type: ProductType): string => {
-		const t = type.toLowerCase().trim();
-		if (t === 'vaccine' || t === 'vaccines') return 'products';
-		if (t === 'bundle' || t === 'bundles') return 'bundles';
-		if (t === 'package' || t === 'packages') return 'packages';
-		return t || 'general';
-	};
-
 	onMount(async () => {
 		// Initialize product type from URL parameter if present
 		const typeParam = $page.url.searchParams.get('type');
@@ -140,26 +143,23 @@
 
 	// Handle doctor selection
 	const handleDoctorSelect = (event: CustomEvent) => {
-		const { option } = event.detail;
-		if (!formData.applicableDoctors?.includes(option.id)) {
-			formData.applicableDoctors = [...formData.applicableDoctors, option.id];
-		}
+		handleAutocompleteSelect(event, formData.applicableDoctors, (ids) => {
+			formData.applicableDoctors = ids;
+		});
 	};
 
 	// Handle product selection
 	const handleProductSelect = (event: CustomEvent) => {
-		const { option } = event.detail;
-		if (!formData.includedProductIds.includes(option.id)) {
-			formData.includedProductIds = [...formData.includedProductIds, option.id];
-		}
+		handleAutocompleteSelect(event, formData.includedProductIds, (ids) => {
+			formData.includedProductIds = ids;
+		});
 	};
 
 	// Handle bundle selection
 	const handleBundleSelect = (event: CustomEvent) => {
-		const { option } = event.detail;
-		if (!formData.includedDoseBundles.includes(option.id)) {
-			formData.includedDoseBundles = [...formData.includedDoseBundles, option.id];
-		}
+		handleAutocompleteSelect(event, formData.includedDoseBundles, (ids) => {
+			formData.includedDoseBundles = ids;
+		});
 	};
 
 	const validateForm = (): boolean => {
@@ -198,27 +198,12 @@
 			if (!formData.includedProductIds || formData.includedProductIds.length === 0) {
 				errors.includedProductIds = 'Debe incluir al menos un producto para el paquete';
 			}
-			// Validate oldPrice if provided
-			if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
-				if (formData.oldPrice < 0) {
-					errors.oldPrice = 'El precio anterior debe ser un número válido';
-				}
-				if (formData.oldPrice <= (formData.price || 0)) {
-					errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
-				}
-			}
+			validateOldPrice(formData, errors);
 		}
 
 		// Validate oldPrice for vaccines if provided
 		if (formData.type === 'vaccine') {
-			if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
-				if (formData.oldPrice < 0) {
-					errors.oldPrice = 'El precio anterior debe ser un número válido';
-				}
-				if (formData.oldPrice <= (formData.price || 0)) {
-					errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
-				}
-			}
+			validateOldPrice(formData, errors);
 		}
 
 		if (formData.type === 'package') {
@@ -232,15 +217,7 @@
 					errors.price =
 						'El precio es requerido cuando los usuarios pueden pagar por el programa completo';
 				}
-				// Validate oldPrice if provided
-				if (formData.oldPrice !== null && formData.oldPrice !== undefined) {
-					if (formData.oldPrice < 0) {
-						errors.oldPrice = 'El precio anterior debe ser un número válido';
-					}
-					if (formData.oldPrice <= (formData.price || 0)) {
-						errors.oldPrice = 'El precio anterior debe ser mayor que el precio actual';
-					}
-				}
+				validateOldPrice(formData, errors);
 			}
 		}
 
@@ -279,21 +256,15 @@
 	};
 
 	const removeApplicableDoctor = (doctorToRemove: string) => {
-		formData.applicableDoctors = formData.applicableDoctors.filter(
-			(doctor) => doctor !== doctorToRemove,
-		);
+		formData.applicableDoctors = removeId(formData.applicableDoctors, doctorToRemove);
 	};
 
 	const removeIncludedProduct = (productToRemove: string) => {
-		formData.includedProductIds = formData.includedProductIds.filter(
-			(product) => product !== productToRemove,
-		);
+		formData.includedProductIds = removeId(formData.includedProductIds, productToRemove);
 	};
 
 	const removeIncludedDoseBundle = (bundleToRemove: string) => {
-		formData.includedDoseBundles = formData.includedDoseBundles.filter(
-			(bundle) => bundle !== bundleToRemove,
-		);
+		formData.includedDoseBundles = removeId(formData.includedDoseBundles, bundleToRemove);
 	};
 
 	const handleSubmit = async () => {
@@ -321,7 +292,7 @@
 		try {
 			// Upload image if selected
 			if (imageFile) {
-				const folder = resolveFolder(formData.type);
+				const folder = resolveProductFolder(formData.type);
 				const imageName = `${Date.now()}_${imageFile.name}`;
 				const imageRef = ref(storage, `${folder}/${imageName}`);
 				await uploadBytes(imageRef, imageFile);
@@ -329,27 +300,16 @@
 			}
 
 			// Prepare data for Firestore
+			const normalizedPrices = normalizeProductPrices(formData);
 			const productData = {
 				...formData,
 				createdAt: serverTimestamp(),
 				updatedAt: serverTimestamp(),
-				// Only save price/oldPrice for packages if toggle is enabled
-				price:
-					formData.type === 'package' && !formData.canPayForWholeProgram
-						? null
-						: formData.price !== undefined
-						? Number(formData.price)
-						: null,
-				// Save oldPrice for all product types (vaccines, bundles, and packages when toggle is enabled)
-				oldPrice:
-					formData.type === 'package' && !formData.canPayForWholeProgram
-						? null
-						: formData.oldPrice !== undefined && formData.oldPrice !== null
-						? Number(formData.oldPrice)
-						: null,
+				price: normalizedPrices.price,
+				oldPrice: normalizedPrices.oldPrice,
 				minAge: Number(formData.minAge || 0),
 				maxAge: Number(formData.maxAge || 18),
-				ageUnit: formData.ageUnit || 'months', // Ensure ageUnit is always set
+				ageUnit: normalizeAgeUnit(formData.ageUnit),
 			};
 
 			// Remove undefined values
@@ -546,31 +506,7 @@
 								{/if}
 							</div>
 
-							{#if formData.price !== null && formData.price !== undefined && formData.oldPrice !== null && formData.oldPrice !== undefined && formData.oldPrice > formData.price}
-								<div class="discount-preview">
-									<div class="discount-icon">
-										<svg
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-										>
-											<path d="M12 2L2 7l10 5 10-5-10-5z" />
-											<path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-										</svg>
-									</div>
-									<div class="discount-content">
-										<p class="discount-label">Vista previa</p>
-										<p class="discount-amount">
-											{Math.round(
-												((formData.oldPrice - formData.price) /
-													formData.oldPrice) *
-													100,
-											)}% de descuento
-										</p>
-									</div>
-								</div>
-							{/if}
+							<DiscountPreview price={formData.price} oldPrice={formData.oldPrice} />
 						</div>
 					{/if}
 				</div>
@@ -621,30 +557,7 @@
 						{/if}
 					</div>
 
-					{#if formData.price !== null && formData.price !== undefined && formData.oldPrice !== null && formData.oldPrice !== undefined && formData.oldPrice > formData.price}
-						<div class="discount-preview">
-							<div class="discount-icon">
-								<svg
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-								>
-									<path d="M12 2L2 7l10 5 10-5-10-5z" />
-									<path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-								</svg>
-							</div>
-							<div class="discount-content">
-								<p class="discount-label">Vista previa</p>
-								<p class="discount-amount">
-									{Math.round(
-										((formData.oldPrice - formData.price) / formData.oldPrice) *
-											100,
-									)}% de descuento
-								</p>
-							</div>
-						</div>
-					{/if}
+					<DiscountPreview price={formData.price} oldPrice={formData.oldPrice} />
 				</div>
 			{/if}
 
@@ -1251,57 +1164,6 @@
 	}
 
 	/* Discount Preview */
-	.discount-preview {
-		margin-top: 0.5rem;
-		padding: 1.25rem;
-		background: linear-gradient(135deg, var(--primary-50) 0%, var(--secondary-50) 100%);
-		border-radius: var(--border-radius);
-		border: 2px solid var(--color-primary);
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		box-shadow: 0 2px 8px rgba(0, 170, 178, 0.1);
-	}
-
-	.discount-icon {
-		width: 48px;
-		height: 48px;
-		border-radius: 12px;
-		background: linear-gradient(135deg, var(--color-primary) 0%, var(--secondary-500) 100%);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		flex-shrink: 0;
-	}
-
-	.discount-icon svg {
-		width: 24px;
-		height: 24px;
-		stroke: white;
-	}
-
-	.discount-content {
-		flex: 1;
-	}
-
-	.discount-label {
-		margin: 0 0 0.25rem 0;
-		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
-		font-weight: 500;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-	}
-
-	.discount-amount {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 700;
-		background: linear-gradient(135deg, var(--color-primary) 0%, var(--secondary-500) 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
 
 	@media (max-width: 768px) {
 		.create-product-container {
