@@ -2,7 +2,11 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { auth, db } from '$lib/firebase/vaqmas';
-	import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+	import {
+		onAuthStateChanged,
+		signInWithEmailAndPassword,
+		sendPasswordResetEmail,
+	} from 'firebase/auth';
 	import { getDoc, doc } from 'firebase/firestore';
 
 	let email = '';
@@ -11,6 +15,12 @@
 	let errorMessage = '';
 	let isAuthenticated = false;
 	let showPassword = false;
+	let showForgotPassword = false;
+	let forgotPasswordEmail = '';
+	let forgotPasswordLoading = false;
+	let forgotPasswordMessage = '';
+	let forgotPasswordSuccess = false;
+	let forgotPasswordTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	onMount(() => {
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -27,7 +37,24 @@
 			}
 		});
 
-		return unsubscribe;
+		// Handle Escape key to close forgot password modal
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape' && showForgotPassword) {
+				closeForgotPassword();
+			}
+		};
+
+		window.addEventListener('keydown', handleEscape);
+
+		return () => {
+			unsubscribe();
+			window.removeEventListener('keydown', handleEscape);
+			// Clear any pending timeouts on unmount
+			if (forgotPasswordTimeoutId !== null) {
+				clearTimeout(forgotPasswordTimeoutId);
+				forgotPasswordTimeoutId = null;
+			}
+		};
 	});
 
 	const handleLogin = async () => {
@@ -75,6 +102,98 @@
 		if (event.key === 'Enter') {
 			handleLogin();
 		}
+	};
+
+	const handleForgotPassword = async () => {
+		if (!forgotPasswordEmail) {
+			forgotPasswordMessage = 'Por favor ingresa tu email';
+			forgotPasswordSuccess = false;
+			return;
+		}
+
+		// Basic email validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(forgotPasswordEmail)) {
+			forgotPasswordMessage = 'Por favor ingresa un email válido';
+			forgotPasswordSuccess = false;
+			return;
+		}
+
+		forgotPasswordLoading = true;
+		forgotPasswordMessage = '';
+
+		// Clear any existing timeout before creating a new one
+		if (forgotPasswordTimeoutId !== null) {
+			clearTimeout(forgotPasswordTimeoutId);
+			forgotPasswordTimeoutId = null;
+		}
+
+		try {
+			// Force Spanish for password reset emails
+			auth.languageCode = 'es';
+
+			// Configure custom action URL for password reset
+			const actionCodeSettings = {
+				url:
+					typeof window !== 'undefined'
+						? `${window.location.origin}/auth/action`
+						: '/auth/action',
+				handleCodeInApp: true,
+			};
+
+			await sendPasswordResetEmail(auth, forgotPasswordEmail, actionCodeSettings);
+			// Security best practice: Show generic success message regardless of whether email exists
+			// This prevents email enumeration attacks
+			forgotPasswordMessage =
+				'Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.';
+			forgotPasswordSuccess = true;
+			// Clear the email field after successful submission
+			forgotPasswordEmail = '';
+			// Auto-close after 5 seconds
+			forgotPasswordTimeoutId = setTimeout(() => {
+				showForgotPassword = false;
+				forgotPasswordMessage = '';
+				forgotPasswordSuccess = false;
+				forgotPasswordTimeoutId = null;
+			}, 5000);
+		} catch (error: any) {
+			console.error('Password reset error:', error);
+			// Security best practice: Don't reveal specific error details
+			// Show generic message to prevent email enumeration
+			forgotPasswordMessage =
+				'Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.';
+			forgotPasswordSuccess = true;
+			// Clear the email field
+			forgotPasswordEmail = '';
+			// Auto-close after 5 seconds
+			forgotPasswordTimeoutId = setTimeout(() => {
+				showForgotPassword = false;
+				forgotPasswordMessage = '';
+				forgotPasswordSuccess = false;
+				forgotPasswordTimeoutId = null;
+			}, 5000);
+		} finally {
+			forgotPasswordLoading = false;
+		}
+	};
+
+	const openForgotPassword = () => {
+		showForgotPassword = true;
+		forgotPasswordEmail = email; // Pre-fill with login email if available
+		forgotPasswordMessage = '';
+		forgotPasswordSuccess = false;
+	};
+
+	const closeForgotPassword = () => {
+		// Clear any pending timeout when closing the modal
+		if (forgotPasswordTimeoutId !== null) {
+			clearTimeout(forgotPasswordTimeoutId);
+			forgotPasswordTimeoutId = null;
+		}
+		showForgotPassword = false;
+		forgotPasswordEmail = '';
+		forgotPasswordMessage = '';
+		forgotPasswordSuccess = false;
 	};
 </script>
 
@@ -174,12 +293,100 @@
 				{/if}
 				{isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
 			</button>
+
+			<div class="forgot-password-link">
+				<button type="button" class="forgot-password-btn" on:click={openForgotPassword}>
+					¿Olvidaste tu contraseña?
+				</button>
+			</div>
 		</form>
 
 		<div class="login-footer">
 			<p>Acceso exclusivo para administradores</p>
 		</div>
 	</div>
+
+	<!-- Forgot Password Modal -->
+	{#if showForgotPassword}
+		<div class="modal-overlay">
+			<button
+				type="button"
+				class="modal-overlay-button"
+				on:click={closeForgotPassword}
+				aria-label="Cerrar modal"
+			>
+				<span class="sr-only">Cerrar</span>
+			</button>
+			<div
+				class="modal-content"
+				role="dialog"
+				aria-labelledby="forgot-password-title"
+				aria-modal="true"
+			>
+				<div class="modal-header">
+					<h2 id="forgot-password-title">Restablecer Contraseña</h2>
+					<button
+						type="button"
+						class="modal-close"
+						on:click={closeForgotPassword}
+						aria-label="Cerrar"
+					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<line x1="18" y1="6" x2="6" y2="18" />
+							<line x1="6" y1="6" x2="18" y2="18" />
+						</svg>
+					</button>
+				</div>
+				<div class="modal-body">
+					<p class="modal-description">
+						Ingresa tu dirección de email y te enviaremos un enlace para restablecer tu
+						contraseña.
+					</p>
+					<div class="form-group">
+						<label for="forgot-password-email">Email</label>
+						<input
+							type="email"
+							id="forgot-password-email"
+							bind:value={forgotPasswordEmail}
+							placeholder="admin@vaqmas.com"
+							disabled={forgotPasswordLoading}
+							required
+						/>
+					</div>
+					{#if forgotPasswordMessage}
+						<div
+							class="forgot-password-message"
+							class:success={forgotPasswordSuccess}
+							class:error={!forgotPasswordSuccess}
+						>
+							{forgotPasswordMessage}
+						</div>
+					{/if}
+				</div>
+				<div class="modal-footer">
+					<button
+						type="button"
+						class="modal-cancel-btn"
+						on:click={closeForgotPassword}
+						disabled={forgotPasswordLoading}
+					>
+						Cancelar
+					</button>
+					<button
+						type="button"
+						class="modal-submit-btn"
+						on:click={handleForgotPassword}
+						disabled={forgotPasswordLoading}
+					>
+						{#if forgotPasswordLoading}
+							<div class="spinner" />
+						{/if}
+						{forgotPasswordLoading ? 'Enviando...' : 'Enviar Enlace'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<div class="background-decoration">
 		<div class="circle circle-1" />
@@ -430,6 +637,231 @@
 		right: 10%;
 	}
 
+	.forgot-password-link {
+		text-align: center;
+		margin-top: 0.5rem;
+	}
+
+	.forgot-password-btn {
+		background: none;
+		border: none;
+		color: #00aab2;
+		font-size: 0.875rem;
+		cursor: pointer;
+		padding: 0.5rem;
+		text-decoration: underline;
+		transition: all 0.3s ease;
+	}
+
+	.forgot-password-btn:hover {
+		color: #007a80;
+		text-decoration: none;
+	}
+
+	.forgot-password-btn:active {
+		transform: scale(0.98);
+	}
+
+	/* Modal Styles */
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		animation: fadeIn 0.2s ease;
+	}
+
+	.modal-overlay-button {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.5);
+		border: none;
+		cursor: pointer;
+		backdrop-filter: blur(4px);
+		padding: 0;
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	.modal-content {
+		background: white;
+		border-radius: 20px;
+		width: 90%;
+		max-width: 450px;
+		max-height: 90vh;
+		overflow-y: auto;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+		animation: slideUp 0.3s ease;
+		position: relative;
+		z-index: 1001;
+		pointer-events: auto;
+	}
+
+	@keyframes slideUp {
+		from {
+			transform: translateY(20px);
+			opacity: 0;
+		}
+		to {
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
+
+	.modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.5rem 2rem;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.modal-header h2 {
+		margin: 0;
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #1f2937;
+	}
+
+	.modal-close {
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+		color: #6b7280;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 6px;
+		transition: all 0.2s ease;
+		width: 2rem;
+		height: 2rem;
+	}
+
+	.modal-close:hover {
+		background: #f3f4f6;
+		color: #1f2937;
+	}
+
+	.modal-close svg {
+		width: 20px;
+		height: 20px;
+	}
+
+	.modal-body {
+		padding: 2rem;
+	}
+
+	.modal-description {
+		margin: 0 0 1.5rem 0;
+		color: #6b7280;
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+
+	.forgot-password-message {
+		padding: 0.75rem 1rem;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		margin-top: 1rem;
+		line-height: 1.5;
+	}
+
+	.forgot-password-message.success {
+		background: #f0fdf4;
+		color: #166534;
+		border: 1px solid #bbf7d0;
+	}
+
+	.forgot-password-message.error {
+		background: #fef2f2;
+		color: #dc2626;
+		border: 1px solid #fecaca;
+	}
+
+	.modal-footer {
+		display: flex;
+		gap: 1rem;
+		padding: 1.5rem 2rem;
+		border-top: 1px solid #e5e7eb;
+		justify-content: flex-end;
+	}
+
+	.modal-cancel-btn {
+		background: #f3f4f6;
+		color: #374151;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 10px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+
+	.modal-cancel-btn:hover:not(:disabled) {
+		background: #e5e7eb;
+	}
+
+	.modal-cancel-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.modal-submit-btn {
+		background: linear-gradient(135deg, #00aab2 0%, #7ed321 100%);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 10px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.modal-submit-btn:hover:not(:disabled) {
+		transform: translateY(-2px);
+		box-shadow: 0 10px 20px rgba(0, 170, 178, 0.3);
+	}
+
+	.modal-submit-btn:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
 	@media (max-width: 480px) {
 		.login-card {
 			margin: 1rem;
@@ -438,6 +870,26 @@
 
 		.login-container {
 			padding: 0.5rem;
+		}
+
+		.modal-content {
+			width: 95%;
+			margin: 1rem;
+		}
+
+		.modal-header,
+		.modal-body,
+		.modal-footer {
+			padding: 1.25rem 1.5rem;
+		}
+
+		.modal-footer {
+			flex-direction: column;
+		}
+
+		.modal-cancel-btn,
+		.modal-submit-btn {
+			width: 100%;
 		}
 	}
 </style>
