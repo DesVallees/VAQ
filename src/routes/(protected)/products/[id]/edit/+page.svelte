@@ -81,15 +81,15 @@
 	// Spanish translations for product types
 	const productTypeLabels = {
 		vaccine: 'Vacuna',
-		bundle: 'Paquete',
-		package: 'Programa',
+		bundle: 'Programa',
+		package: 'Paquete',
 	};
 
 	// Validation
 	let errors: Record<string, string> = {};
 
 	// Clear price fields when toggle is turned off
-	$: if (formData.type === 'package' && !formData.canPayForWholeProgram) {
+	$: if ((formData.type === 'package' || formData.type === 'bundle') && !formData.canPayForWholeProgram) {
 		formData.price = null;
 		formData.oldPrice = null;
 	}
@@ -286,9 +286,16 @@
 
 		if (formData.type === 'bundle') {
 			if (!formData.includedProductIds || formData.includedProductIds.length === 0) {
-				errors.includedProductIds = 'Debe incluir al menos un producto para el paquete';
+				errors.includedProductIds = 'Debe incluir al menos un producto para el programa';
 			}
-			validateOldPrice(formData, errors);
+			// Validate price when canPayForWholeProgram is enabled
+			if (formData.canPayForWholeProgram) {
+				if (formData.price === null || formData.price === undefined || formData.price < 0) {
+					errors.price =
+						'El precio es requerido cuando los usuarios pueden pagar por el programa completo';
+				}
+				validateOldPrice(formData, errors);
+			}
 		}
 
 		// Validate oldPrice for vaccines if provided
@@ -299,13 +306,13 @@
 		if (formData.type === 'package') {
 			if (!formData.includedDoseBundles || formData.includedDoseBundles.length === 0) {
 				errors.includedDoseBundles =
-					'Debe incluir al menos un paquete de dosis para el programa';
+					'Debe incluir al menos un programa de dosis para el paquete';
 			}
 			// Validate price when canPayForWholeProgram is enabled
 			if (formData.canPayForWholeProgram) {
 				if (formData.price === null || formData.price === undefined || formData.price < 0) {
-					errors.price =
-						'El precio es requerido cuando los usuarios pueden pagar por el programa completo';
+				errors.price =
+					'El precio es requerido cuando los usuarios pueden pagar por el paquete completo';
 				}
 				validateOldPrice(formData, errors);
 			}
@@ -579,7 +586,7 @@
 						<div class="form-group">
 							<label class="switch-label">
 								<span class="switch-text"
-									>Ocultar paquete (solo visible en programas)</span
+									>Ocultar programa (solo visible en paquetes)</span
 								>
 								<label class="switch">
 									<input
@@ -591,8 +598,8 @@
 								</label>
 							</label>
 							<p class="help-text">
-								Si está oculto, el paquete solo se mostrará cuando esté incluido en
-								un programa. Si no está oculto, se mostrará en las pantallas de
+								Si está oculto, el programa solo se mostrará cuando esté incluido en
+								un paquete. Si no está oculto, se mostrará en las pantallas de
 								inicio y tienda de la app.
 							</p>
 						</div>
@@ -601,6 +608,75 @@
 
 				<!-- Pricing -->
 				{#if formData.type === 'package'}
+					<div class="form-section">
+						<h3>Precios</h3>
+
+						<div class="form-group">
+							<label class="switch-label">
+								<span class="switch-text"
+									>Los usuarios pueden pagar por el paquete completo</span
+								>
+								<label class="switch">
+									<input
+										type="checkbox"
+										bind:checked={formData.canPayForWholeProgram}
+										class="switch-input"
+									/>
+									<span class="switch-slider" />
+								</label>
+							</label>
+							<p class="help-text">
+								Activa esta opción para permitir que los usuarios paguen por todo el
+								paquete de una vez
+							</p>
+						</div>
+
+						{#if formData.canPayForWholeProgram}
+							<div class="price-fields">
+								<div class="form-group">
+									<label for="programPrice">Precio del Paquete *</label>
+									<input
+										id="programPrice"
+										type="number"
+										bind:value={formData.price}
+										min="0"
+										step="0.01"
+										placeholder="0.00"
+										class:error={errors.price}
+									/>
+									{#if errors.price}
+										<span class="error-text">{errors.price}</span>
+									{/if}
+								</div>
+
+								<div class="form-group">
+									<label for="oldPrice">Precio Anterior (sin descuento)</label>
+									<input
+										id="oldPrice"
+										type="number"
+										bind:value={formData.oldPrice}
+										min="0"
+										step="0.01"
+										placeholder="0.00 (opcional)"
+										class:error={errors.oldPrice}
+									/>
+									<p class="help-text">
+										Precio original antes del descuento. Si se proporciona, se
+										mostrará el descuento en la app.
+									</p>
+									{#if errors.oldPrice}
+										<span class="error-text">{errors.oldPrice}</span>
+									{/if}
+								</div>
+
+								<DiscountPreview
+									price={formData.price}
+									oldPrice={formData.oldPrice}
+								/>
+							</div>
+						{/if}
+					</div>
+				{:else if formData.type === 'bundle'}
 					<div class="form-section">
 						<h3>Precios</h3>
 
@@ -620,7 +696,7 @@
 							</label>
 							<p class="help-text">
 								Activa esta opción para permitir que los usuarios paguen por todo el
-								programa de una vez
+								programa de una vez. Si está desactivada, los usuarios deberán pagar por cada vacuna individualmente.
 							</p>
 						</div>
 
@@ -674,13 +750,7 @@
 						<h3>Precios</h3>
 
 						<div class="form-group">
-							<label for="price">
-								{#if formData.type === 'bundle'}
-									Precio por Paquete *
-								{:else}
-									Precio por Dosis *
-								{/if}
-							</label>
+							<label for="price">Precio por Dosis *</label>
 							<input
 								id="price"
 								type="number"
@@ -854,7 +924,7 @@
 				<!-- Bundle-specific fields -->
 				{#if formData.type === 'bundle'}
 					<div class="form-section">
-						<h3>Información de Paquete</h3>
+						<h3>Información de Programa</h3>
 
 						<div class="form-group">
 							<label for="targetMilestone">Hito Objetivo</label>
@@ -869,7 +939,7 @@
 						<div class="form-group">
 							<label>Vacunas Incluidas *</label>
 							<AutocompleteInput
-								placeholder="Busca y selecciona vacunas para incluir en este paquete"
+								placeholder="Busca y selecciona vacunas para incluir en este programa"
 								options={availableProducts}
 								selectedOptions={formData.includedProductIds}
 								removeOption={removeIncludedProduct}
@@ -877,7 +947,7 @@
 							/>
 							<p class="help-text">
 								Busca vacunas por nombre o ID y selecciónalos para incluirlos en
-								este paquete (solo se muestran vacunas)
+								este programa (solo se muestran vacunas)
 							</p>
 							{#if errors.includedProductIds}
 								<span class="error-text">{errors.includedProductIds}</span>
@@ -889,20 +959,20 @@
 				<!-- Package-specific fields -->
 				{#if formData.type === 'package'}
 					<div class="form-section">
-						<h3>Información de Programa</h3>
+						<h3>Información de Paquete</h3>
 
 						<div class="form-group">
-							<label>Paquetes de Dosis Incluidos *</label>
+							<label>Programas de Dosis Incluidos *</label>
 							<AutocompleteInput
-								placeholder="Busca y selecciona paquetes de dosis para incluir en este programa"
+								placeholder="Busca y selecciona programas de dosis para incluir en este paquete"
 								options={availableBundles}
 								selectedOptions={formData.includedDoseBundles}
 								removeOption={removeIncludedDoseBundle}
 								on:select={handleBundleSelect}
 							/>
 							<p class="help-text">
-								Busca paquetes de dosis por nombre o ID y selecciónalos para
-								incluirlos en este programa
+								Busca programas de dosis por nombre o ID y selecciónalos para
+								incluirlos en este paquete
 							</p>
 							{#if errors.includedDoseBundles}
 								<span class="error-text">{errors.includedDoseBundles}</span>

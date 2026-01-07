@@ -128,19 +128,27 @@
 		}
 	};
 
-	const formatPrice = (price: number | null) => {
-		if (price === null) return '-';
+	const formatPrice = (product: Product) => {
+		// For bundles and packages, show dash if canPayForWholeProgram is false
+		if (
+			(product.type === 'bundle' || product.type === 'package') &&
+			!product.canPayForWholeProgram
+		) {
+			return '-';
+		}
+		// For other cases, show dash if price is null
+		if (product.price === null) return '-';
 		return new Intl.NumberFormat('es-CO', {
 			style: 'currency',
 			currency: 'COP',
-		}).format(price);
+		}).format(product.price);
 	};
 
 	const formatType = (type: ProductType) => {
 		const typeMap = {
 			vaccine: 'Vacuna',
-			bundle: 'Paquete',
-			package: 'Programa',
+			bundle: 'Programa',
+			package: 'Paquete',
 		};
 		return typeMap[type] || type;
 	};
@@ -254,7 +262,7 @@
 				<img src="/images/logo.png" alt="VAQ+ Logo" class="header-logo-image" />
 				<div class="header-text">
 					<h1>Gestión de Productos</h1>
-					<p>Administra vacunas, paquetes y productos médicos</p>
+					<p>Administra vacunas, programas y productos médicos</p>
 				</div>
 			</div>
 		</div>
@@ -327,7 +335,7 @@
 						updateURL();
 					}}
 				>
-					Paquetes
+					Programas
 				</button>
 				<button
 					class="filter-btn"
@@ -337,7 +345,7 @@
 						updateURL();
 					}}
 				>
-					Programas
+					Paquetes
 				</button>
 			</div>
 		</div>
@@ -423,7 +431,7 @@
 										{formatType(product.type)}
 									</span>
 								</td>
-								<td class="col-price">{formatPrice(product.price)}</td>
+								<td class="col-price">{formatPrice(product)}</td>
 								<td class="col-age-min"
 									>{product.minAge}
 									{product.ageUnit === 'years' ? 'años' : 'meses'}</td
@@ -508,7 +516,7 @@
 					</svg>
 				</div>
 				<div class="stat-content">
-					<h3>Paquetes</h3>
+					<h3>Programas y Paquetes</h3>
 					<p class="stat-number">
 						{products.filter((p) => p.type === 'bundle' || p.type === 'package').length}
 					</p>

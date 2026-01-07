@@ -52,7 +52,7 @@
 	const appointmentTypeLabels: Record<string, string> = {
 		vaccination: 'Vacunación',
 		consultation: 'Consulta',
-		packageApplication: 'Aplicación de Paquete',
+		packageApplication: 'Aplicación de Programa',
 		checkup: 'Revisión',
 		followUp: 'Seguimiento',
 	};
@@ -176,8 +176,8 @@
 			// Prepare products for AutocompleteInput
 			const productTypeLabels: Record<string, string> = {
 				vaccine: 'Vacuna',
-				bundle: 'Paquete',
-				package: 'Programa',
+				bundle: 'Programa',
+				package: 'Paquete',
 			};
 			availableProducts = products.map((product) => ({
 				id: product.id,

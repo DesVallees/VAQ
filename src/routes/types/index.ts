@@ -60,6 +60,8 @@ export interface DoseBundle extends BaseProduct {
     includedProductIds: string[]; // Required for bundles
     targetMilestone: string | null;
     isHidden?: boolean; // Optional: if true, bundle is only shown when referenced by a program
+    canPayForWholeProgram?: boolean; // Optional: allows users to pay for the whole program
+    oldPrice?: number | null; // Optional: old price before discount
 }
 
 // VaccinationProgram-specific interface
@@ -284,6 +286,8 @@ export interface DoseBundleFormData extends BaseProductFormData {
     includedProductIds: string[];
     targetMilestone: string | null;
     isHidden?: boolean;
+    canPayForWholeProgram?: boolean;
+    oldPrice?: number | null;
 }
 
 export interface VaccinationProgramFormData extends BaseProductFormData {

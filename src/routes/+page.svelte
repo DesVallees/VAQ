@@ -213,7 +213,7 @@
 					<p>Programa completo de inmunización para todas las edades</p>
 				</div>
 				<div class="product-category">
-					<h3>Paquetes</h3>
+					<h3>Programas</h3>
 					<p>Combinaciones optimizadas para máxima protección</p>
 				</div>
 				<div class="product-category">
@@ -447,7 +447,7 @@
 						<h4>Servicios</h4>
 						<a href="#products">Vacunación</a>
 						<a href="#products">Consultas</a>
-						<a href="#products">Paquetes</a>
+						<a href="#products">Programas</a>
 					</div>
 					<div class="footer-section">
 						<h4>Empresa</h4>

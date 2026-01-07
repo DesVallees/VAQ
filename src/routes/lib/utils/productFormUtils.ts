@@ -41,8 +41,11 @@ export function normalizeProductPrices(formData: ProductFormData): {
 	price: number | null;
 	oldPrice: number | null;
 } {
-	// For packages, only save price/oldPrice if toggle is enabled
-	if (formData.type === 'package' && !formData.canPayForWholeProgram) {
+	// For packages and bundles, only save price/oldPrice if toggle is enabled
+	if (
+		(formData.type === 'package' || formData.type === 'bundle') &&
+		!formData.canPayForWholeProgram
+	) {
 		return { price: null, oldPrice: null };
 	}
 

@@ -283,7 +283,7 @@
 		const typeMap: Record<string, string> = {
 			vaccination: 'Vacunación',
 			consultation: 'Consulta',
-			packageApplication: 'Aplicación de Paquete',
+			packageApplication: 'Aplicación de Programa',
 			checkup: 'Revisión',
 			followUp: 'Seguimiento',
 		};
