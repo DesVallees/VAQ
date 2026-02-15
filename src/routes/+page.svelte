@@ -93,7 +93,7 @@
 				<a href="#products" class="nav-link" on:click={handleNavClick}>Productos</a>
 				<a href="#about" class="nav-link" on:click={handleNavClick}>Acerca de</a>
 				<a href="#contact" class="nav-link" on:click={handleNavClick}>Contacto</a>
-				<button class="login-btn" on:click={() => goto('/login')}> Iniciar Sesión </button>
+				<!-- <button class="login-btn" on:click={() => goto('/login')}> Iniciar Sesión </button> -->
 			</nav>
 		</div>
 	</header>
@@ -111,9 +111,7 @@
 					pequeños.
 				</p>
 				<div class="hero-actions">
-					<button class="cta-btn primary" on:click={() => goto('/login')}>
-						Acceder al Sistema
-					</button>
+					<button class="cta-btn primary" on:click={() => {}}> Descargar la App </button>
 					<button
 						class="cta-btn secondary"
 						on:click={() => {
@@ -458,7 +456,7 @@
 				</div>
 			</div>
 			<div class="footer-bottom">
-				<p>&copy; 2024 VAQ+. Todos los derechos reservados.</p>
+				<p>&copy; {new Date().getFullYear()} VAQ+. Todos los derechos reservados.</p>
 			</div>
 		</div>
 	</footer>
