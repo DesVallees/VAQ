@@ -215,8 +215,8 @@
 					<p>Combinaciones optimizadas para máxima protección</p>
 				</div>
 				<div class="product-category">
-					<h3>Consultas</h3>
-					<p>Atención pediátrica especializada y personalizada</p>
+					<h3>Paquetes</h3>
+					<p>Esquemas completos con descuentos especiales</p>
 				</div>
 			</div>
 		</div>
@@ -444,8 +444,8 @@
 					<div class="footer-section">
 						<h4>Servicios</h4>
 						<a href="#products">Vacunación</a>
-						<a href="#products">Consultas</a>
 						<a href="#products">Programas</a>
+						<a href="#products">Paquetes</a>
 					</div>
 					<div class="footer-section">
 						<h4>Empresa</h4>
