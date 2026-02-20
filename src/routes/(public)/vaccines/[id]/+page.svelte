@@ -274,6 +274,16 @@
 	}
 
 	@media (max-width: 768px) {
+		.detail-dl {
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+		}
+
+		.detail-dl dd {
+			margin-bottom: 1rem;
+		}
+
 		.detail-hero {
 			flex-direction: column;
 			align-items: center;
