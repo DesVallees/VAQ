@@ -1,17 +1,8 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { vaccines, programs, packages } from '../stores/publicProducts';
 
-	let isMobileMenuOpen = false;
 	let selectedImage: string | null = null;
-
-	const toggleMobileMenu = () => {
-		isMobileMenuOpen = !isMobileMenuOpen;
-	};
-
-	const closeMobileMenu = () => {
-		isMobileMenuOpen = false;
-	};
 
 	const openImage = (imagePath: string) => {
 		selectedImage = imagePath;
@@ -23,32 +14,28 @@
 		document.body.style.overflow = '';
 	};
 
-	// Close mobile menu when clicking on a link
-	const handleNavClick = () => {
-		closeMobileMenu();
+	const handleOverlayKeydown = (e: KeyboardEvent) => {
+		if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			closeImage();
+		}
 	};
 
-	// Close mobile menu when clicking outside
-	onMount(() => {
-		const handleClickOutside = (event: Event) => {
-			const target = event.target as HTMLElement;
-			if (!target.closest('.header-nav') && !target.closest('.mobile-menu-toggle')) {
-				closeMobileMenu();
-			}
-		};
+	const handleCardKeydown = (e: KeyboardEvent, imagePath: string) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			openImage(imagePath);
+		}
+	};
 
+	onMount(() => {
 		const handleEscape = (event: KeyboardEvent) => {
 			if (event.key === 'Escape' && selectedImage) {
 				closeImage();
 			}
 		};
-
-		document.addEventListener('click', handleClickOutside);
 		document.addEventListener('keydown', handleEscape);
-		return () => {
-			document.removeEventListener('click', handleClickOutside);
-			document.removeEventListener('keydown', handleEscape);
-		};
+		return () => document.removeEventListener('keydown', handleEscape);
 	});
 </script>
 
@@ -58,76 +45,41 @@
 		name="description"
 		content="VAQ+ es la plataforma líder en vacunación y cuidado pediátrico. Conectamos familias con los mejores especialistas."
 	/>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-	<!-- Favicon -->
-	<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
-	<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png" />
-	<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
-	<link rel="manifest" href="/site.webmanifest" />
-	<meta name="theme-color" content="#667eea" />
 </svelte:head>
 
-<!-- Landing Page for Non-Authenticated Users -->
-<div class="landing-page">
-	<!-- Header -->
-	<header class="landing-header">
-		<div class="header-container">
-			<div class="header-logo">
-				<img src="/images/logo.png" alt="VAQ+ Logo" class="logo-image" />
-				<div class="logo-text">
-					<h1>VAQ+</h1>
-					<p>Vacunación y Cuidado Pediátrico</p>
-				</div>
-			</div>
-
-			<!-- Mobile Menu Toggle -->
-			<button class="mobile-menu-toggle" on:click={toggleMobileMenu} aria-label="Toggle menu">
-				<svg viewBox="0 0 24 24" class="menu-icon">
-					<path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-				</svg>
-			</button>
-
-			<nav class="header-nav" class:open={isMobileMenuOpen}>
-				<a href="#features" class="nav-link" on:click={handleNavClick}>Características</a>
-				<a href="#products" class="nav-link" on:click={handleNavClick}>Productos</a>
-				<a href="#about" class="nav-link" on:click={handleNavClick}>Acerca de</a>
-				<a href="#contact" class="nav-link" on:click={handleNavClick}>Contacto</a>
-				<!-- <button class="login-btn" on:click={() => goto('/login')}> Iniciar Sesión </button> -->
-			</nav>
-		</div>
-	</header>
-
+<div class="landing-body">
 	<!-- Hero Section -->
 	<section class="hero-section">
-		<div class="hero-container">
-			<div class="hero-content">
-				<h1 class="hero-title">
-					Tu Salud, Nuestra <span class="highlight">Prioridad</span>
-				</h1>
-				<p class="hero-subtitle">
-					VAQ+ es la plataforma líder en vacunación y cuidado pediátrico. Conectamos
-					familias con los mejores especialistas para garantizar el bienestar de los más
-					pequeños.
-				</p>
-				<div class="hero-actions">
-					<button class="cta-btn primary" on:click={() => {}}> Descargar la App </button>
-					<button
-						class="cta-btn secondary"
-						on:click={() => {
-							const element = document.getElementById('features');
-							if (element) {
-								element.scrollIntoView({ behavior: 'smooth' });
-							}
-						}}
-					>
-						Conocer Más
-					</button>
+		<div class="container">
+			<div class="hero-container">
+				<div class="hero-content">
+					<h1 class="hero-title">
+						Tu Salud, Nuestra <span class="highlight">Prioridad</span>
+					</h1>
+					<p class="hero-subtitle">
+						VAQ+ es la plataforma líder en vacunación y cuidado pediátrico. Conectamos
+						familias con los mejores especialistas para garantizar el bienestar de los
+						más pequeños.
+					</p>
+					<div class="hero-actions">
+						<button class="cta-btn primary" on:click={() => {}}>
+							Descargar la App
+						</button>
+						<button
+							class="cta-btn secondary"
+							on:click={() => {
+								const element = document.getElementById('features');
+								if (element) element.scrollIntoView({ behavior: 'smooth' });
+							}}
+						>
+							Conocer Más
+						</button>
+					</div>
 				</div>
-			</div>
-			<div class="hero-visual">
-				<div class="hero-image-container">
-					<img src="/images/logo.png" alt="VAQ+ App" class="hero-app-image" />
+				<div class="hero-visual">
+					<div class="hero-image-container">
+						<img src="/images/logo.png" alt="VAQ+ App" class="hero-app-image" />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -206,18 +158,27 @@
 				<p>Vacunas y servicios médicos de la más alta calidad</p>
 			</div>
 			<div class="products-preview">
-				<div class="product-category">
+				<a href="/vaccines" class="product-category">
 					<h3>Vacunas</h3>
 					<p>Programa completo de inmunización para todas las edades</p>
-				</div>
-				<div class="product-category">
+					{#if $vaccines.length > 0}
+						<span class="product-teaser">Ver {$vaccines.length} vacunas</span>
+					{/if}
+				</a>
+				<a href="/programs" class="product-category">
 					<h3>Programas</h3>
 					<p>Combinaciones optimizadas para máxima protección</p>
-				</div>
-				<div class="product-category">
+					{#if $programs.length > 0}
+						<span class="product-teaser">Ver {$programs.length} programas</span>
+					{/if}
+				</a>
+				<a href="/packages" class="product-category">
 					<h3>Paquetes</h3>
 					<p>Esquemas completos con descuentos especiales</p>
-				</div>
+					{#if $packages.length > 0}
+						<span class="product-teaser">Ver {$packages.length} paquetes</span>
+					{/if}
+				</a>
 			</div>
 		</div>
 	</section>
@@ -232,7 +193,10 @@
 			<div class="scp-programs-grid">
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/1.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/1.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -244,7 +208,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/1-1.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/1-1.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -259,7 +226,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/2.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/2.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -271,7 +241,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/3.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/3.webp')}
 				>
 					<div class="program-image-container">
 						<img src="/images/SCP_programs/3.webp" alt="Vacunación de la gestante" />
@@ -280,7 +253,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/4.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/4.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -292,7 +268,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/5.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/5.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -306,7 +285,10 @@
 				</div>
 				<div
 					class="scp-program-card"
+					role="button"
+					tabindex="0"
 					on:click={() => openImage('/images/SCP_programs/6.webp')}
+					on:keydown={(e) => handleCardKeydown(e, '/images/SCP_programs/6.webp')}
 				>
 					<div class="program-image-container">
 						<img
@@ -320,9 +302,14 @@
 		</div>
 	</section>
 
-	<!-- Image Overlay -->
 	{#if selectedImage}
-		<div class="image-overlay" on:click={closeImage} role="button" tabindex="-1">
+		<div
+			class="image-overlay"
+			role="button"
+			tabindex="-1"
+			on:click={closeImage}
+			on:keydown={handleOverlayKeydown}
+		>
 			<button class="close-overlay" on:click|stopPropagation={closeImage} aria-label="Cerrar">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 					<line x1="18" y1="6" x2="6" y2="18" />
@@ -431,154 +418,29 @@
 			</div>
 		</div>
 	</section>
-
-	<!-- Footer -->
-	<footer class="landing-footer">
-		<div class="container">
-			<div class="footer-content">
-				<div class="footer-logo">
-					<img src="/images/logo.png" alt="VAQ+ Logo" class="footer-logo-image" />
-					<p>Vacunación y Cuidado Pediátrico</p>
-				</div>
-				<div class="footer-links">
-					<div class="footer-section">
-						<h4>Servicios</h4>
-						<a href="#products">Vacunación</a>
-						<a href="#products">Programas</a>
-						<a href="#products">Paquetes</a>
-					</div>
-					<div class="footer-section">
-						<h4>Empresa</h4>
-						<a href="#about">Acerca de</a>
-						<a href="#contact">Contacto</a>
-						<a href="/login">Admin</a>
-					</div>
-				</div>
-			</div>
-			<div class="footer-bottom">
-				<p>&copy; {new Date().getFullYear()} VAQ+. Todos los derechos reservados.</p>
-			</div>
-		</div>
-	</footer>
 </div>
 
 <style>
-	.landing-page {
+	.landing-body {
 		min-height: 100vh;
-		background-color: #f9fafb;
-		padding-top: 80px; /* Adjust for fixed header */
+		background-color: var(--surface-50, #f9fafb);
 	}
 
-	.landing-header {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		background-color: white;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-		z-index: 1000;
-		padding: 1rem 0;
-	}
-
-	.header-container {
+	.container {
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 0 1rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.header-logo {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.logo-image {
-		width: 50px;
-		height: 50px;
-	}
-
-	.logo-text h1 {
-		margin: 0;
-		font-size: 1.8rem;
-		font-weight: 700;
-		color: #1e3a8a;
-	}
-
-	.logo-text p {
-		margin: 0;
-		font-size: 0.9rem;
-		color: #6b7280;
-	}
-
-	/* Mobile Menu Toggle */
-	.mobile-menu-toggle {
-		display: none;
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 0.5rem;
-		border-radius: 4px;
-		transition: background-color 0.2s ease;
-	}
-
-	.mobile-menu-toggle:hover {
-		background-color: #f3f4f6;
-	}
-
-	.menu-icon {
-		width: 24px;
-		height: 24px;
-		fill: #374151;
-	}
-
-	.header-nav {
-		display: flex;
-		gap: 2rem;
-		margin-left: 2rem;
-		align-items: center;
-	}
-
-	.nav-link {
-		font-size: 0.95rem;
-		font-weight: 600;
-		color: #4b5563;
-		text-decoration: none;
-		transition: color 0.2s ease;
-	}
-
-	.nav-link:hover {
-		color: #1e3a8a;
-	}
-
-	.login-btn {
-		padding: 0.6rem 1.2rem;
-		background-color: #1e3a8a;
-		color: white;
-		border: none;
-		border-radius: 8px;
-		font-size: 0.9rem;
-		font-weight: 600;
-		cursor: pointer;
-		transition: background-color 0.2s ease;
-	}
-
-	.login-btn:hover {
-		background-color: #1e40af;
 	}
 
 	.hero-section {
 		padding: 4rem 0;
-		background-color: #f0f9eb; /* Light green background */
+		background-color: #f0f9eb;
 		text-align: center;
 	}
 
 	.hero-container {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0 1rem;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -593,13 +455,13 @@
 	.hero-title {
 		font-size: 3.5rem;
 		font-weight: 800;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		margin-bottom: 1.5rem;
 	}
 
 	.hero-subtitle {
 		font-size: 1.25rem;
-		color: #4b5563;
+		color: var(--surface-600, #4b5563);
 		margin-bottom: 2.5rem;
 		line-height: 1.8;
 	}
@@ -619,7 +481,7 @@
 	}
 
 	.cta-btn.primary {
-		background-color: #1e3a8a;
+		background-color: var(--primary-800, #1e3a8a);
 		color: white;
 		border: none;
 	}
@@ -631,7 +493,7 @@
 
 	.cta-btn.secondary {
 		background-color: #e0e7ff;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		border: none;
 	}
 
@@ -669,12 +531,6 @@
 		text-align: center;
 	}
 
-	.container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 1rem;
-	}
-
 	.section-header {
 		margin-bottom: 3rem;
 	}
@@ -682,13 +538,13 @@
 	.section-header h2 {
 		font-size: 2.5rem;
 		font-weight: 700;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		margin-bottom: 0.8rem;
 	}
 
 	.section-header p {
 		font-size: 1.1rem;
-		color: #6b7280;
+		color: var(--surface-600, #6b7280);
 		margin-bottom: 2rem;
 	}
 
@@ -712,6 +568,11 @@
 		transition: transform 0.3s ease, box-shadow 0.3s ease;
 	}
 
+	.product-category {
+		text-decoration: none;
+		color: inherit;
+	}
+
 	.feature-card:hover,
 	.product-category:hover {
 		transform: translateY(-5px);
@@ -721,18 +582,24 @@
 	.feature-icon,
 	.product-category h3 {
 		font-size: 3rem;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 	}
 
 	.feature-card p,
 	.product-category p {
 		font-size: 0.95rem;
-		color: #4b5563;
+		color: var(--surface-600, #4b5563);
 		line-height: 1.6;
 	}
 
+	.product-teaser {
+		font-size: 0.85rem;
+		color: var(--primary-600, #0099a0);
+		font-weight: 600;
+	}
+
 	.about-section {
-		background-color: #f9fafb;
+		background-color: var(--surface-50, #f9fafb);
 	}
 
 	.about-content {
@@ -750,13 +617,13 @@
 	.about-text h2 {
 		font-size: 2.5rem;
 		font-weight: 700;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		margin-bottom: 1.5rem;
 	}
 
 	.about-text p {
 		font-size: 1.1rem;
-		color: #4b5563;
+		color: var(--surface-600, #4b5563);
 		margin-bottom: 2.5rem;
 		line-height: 1.8;
 	}
@@ -773,14 +640,14 @@
 	.stat-number {
 		font-size: 2.5rem;
 		font-weight: 800;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		display: block;
 		margin-bottom: 0.5rem;
 	}
 
 	.stat-label {
 		font-size: 0.9rem;
-		color: #6b7280;
+		color: var(--surface-600, #6b7280);
 	}
 
 	.about-visual {
@@ -804,8 +671,7 @@
 	}
 
 	.contact-section {
-		background-color: #f0f9eb; /* Light green background */
-		padding-bottom: 0; /* Remove extra padding */
+		background-color: #f0f9eb;
 	}
 
 	.contact-content {
@@ -826,26 +692,26 @@
 		align-items: center;
 		gap: 1rem;
 		font-size: 1.1rem;
-		color: #4b5563;
+		color: var(--surface-600, #4b5563);
 	}
 
 	.contact-item svg {
 		width: 28px;
 		height: 28px;
-		fill: #1e3a8a;
+		fill: var(--primary-800, #1e3a8a);
 	}
 
 	.contact-item h4 {
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 	}
 
 	.contact-item p {
 		margin: 0;
 		font-size: 0.9rem;
-		color: #6b7280;
+		color: var(--surface-600, #6b7280);
 	}
 
 	.contact-form {
@@ -862,15 +728,10 @@
 		gap: 1.5rem;
 	}
 
-	.form-group {
-		display: flex;
-		flex-direction: column;
-	}
-
 	.form-group input,
 	.form-group textarea {
 		padding: 0.8rem 1rem;
-		border: 1px solid #d1d5db;
+		border: 1px solid var(--surface-300, #d1d5db);
 		border-radius: 8px;
 		font-size: 1rem;
 		transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -878,7 +739,7 @@
 
 	.form-group input:focus,
 	.form-group textarea:focus {
-		border-color: #1e3a8a;
+		border-color: var(--primary-800, #1e3a8a);
 		box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.2);
 		outline: none;
 	}
@@ -891,7 +752,7 @@
 
 	.submit-btn {
 		padding: 0.8rem 1.5rem;
-		background-color: #1e3a8a;
+		background-color: var(--primary-800, #1e3a8a);
 		color: white;
 		border: none;
 		border-radius: 10px;
@@ -906,88 +767,13 @@
 		transform: translateY(-2px);
 	}
 
-	.landing-footer {
-		background-color: #1e3a8a;
-		color: white;
-		padding: 3rem 0;
-		margin-top: 4rem;
-	}
-
-	.footer-content {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 1rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 2rem;
-	}
-
-	.footer-logo {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.footer-logo-image {
-		width: 60px;
-		height: 60px;
-	}
-
-	.footer-logo p {
-		font-size: 0.9rem;
-		color: #e0e7ff;
-		margin: 0;
-	}
-
-	.footer-links {
-		display: flex;
-		gap: 3rem;
-		flex-wrap: wrap;
-	}
-
-	.footer-section h4 {
-		font-size: 1rem;
-		font-weight: 600;
-		color: #e0e7ff;
-		margin-bottom: 1rem;
-	}
-
-	.footer-section a {
-		display: block;
-		color: #dbe4ff;
-		text-decoration: none;
-		font-size: 0.9rem;
-		margin-bottom: 0.5rem;
-		transition: color 0.2s ease;
-	}
-
-	.footer-section a:hover {
-		color: #ffffff;
-	}
-
-	.footer-bottom {
-		text-align: center;
-		padding-top: 2rem;
-		border-top: 1px solid rgba(255, 255, 255, 0.2);
-		margin-top: 2rem;
-	}
-
-	.footer-bottom p {
-		font-size: 0.8rem;
-		color: #dbe4ff;
-		margin: 0;
-	}
-
-	/* SCP Programs Section */
 	.scp-programs-section {
-		background-color: #f9fafb;
+		background-color: var(--surface-50, #f9fafb);
 	}
 
 	.update-date {
 		font-size: 1rem;
-		color: #6b7280;
+		color: var(--surface-600, #6b7280);
 		font-style: italic;
 		margin-top: -1rem;
 		margin-bottom: 2rem;
@@ -1020,7 +806,7 @@
 		width: 100%;
 		height: 400px;
 		overflow: hidden;
-		background-color: #f3f4f6;
+		background-color: var(--surface-200, #f3f4f6);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1042,12 +828,11 @@
 		margin: 0;
 		font-size: 1.1rem;
 		font-weight: 600;
-		color: #1e3a8a;
+		color: var(--primary-800, #1e3a8a);
 		text-align: left;
 		line-height: 1.4;
 	}
 
-	/* Image Overlay */
 	.image-overlay {
 		position: fixed;
 		top: 0;
@@ -1129,270 +914,129 @@
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 	}
 
-	/* Responsive Design */
 	@media (max-width: 1024px) {
 		.hero-container {
 			flex-direction: column;
 			text-align: center;
-			padding-top: 100px; /* Adjust for fixed header */
+			padding-top: 0;
 		}
-
 		.hero-content {
 			text-align: center;
 		}
-
 		.hero-actions {
 			flex-direction: column;
 			gap: 1rem;
 		}
-
 		.hero-visual {
-			order: -1; /* Move image to the top */
+			order: -1;
 		}
-
 		.features-grid,
 		.products-preview,
 		.scp-programs-grid {
 			grid-template-columns: 1fr;
 		}
-
 		.about-content {
 			flex-direction: column;
 			text-align: center;
 			gap: 2rem;
 		}
-
 		.about-visual {
-			order: -1; /* Move image to the top */
+			order: -1;
 		}
-
 		.contact-content {
 			flex-direction: column;
 			gap: 2rem;
 		}
-
 		.contact-info {
-			order: -1; /* Move info to the top */
+			order: -1;
 		}
-
 		.contact-form {
 			width: 100%;
-		}
-
-		.footer-content {
-			flex-direction: column;
-			align-items: center;
-			gap: 1.5rem;
-		}
-
-		.footer-links {
-			flex-direction: column;
-			align-items: center;
-			gap: 1rem;
 		}
 	}
 
 	@media (max-width: 768px) {
-		section {
-			padding-inline: 0.8rem !important;
-		}
-
-		.mobile-menu-toggle {
-			display: block;
-		}
-
-		.header-nav {
-			position: absolute;
-			top: 100%;
-			left: 0;
-			right: 0;
-			background: white;
-			flex-direction: column;
-			gap: 0;
-			margin: 0;
-			padding: 1rem;
-			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			transform: translateY(-100%);
-			opacity: 0;
-			visibility: hidden;
-			transition: all 0.3s ease;
-		}
-
-		.header-nav.open {
-			transform: translateY(0);
-			opacity: 1;
-			visibility: visible;
-		}
-
-		.nav-link {
-			padding: 0.75rem 0;
-			border-bottom: 1px solid #f3f4f6;
-			width: 100%;
-			text-align: center;
-		}
-
-		.nav-link:last-child {
-			border-bottom: none;
-		}
-
-		.login-btn {
-			width: 100%;
-			margin-top: 0.5rem;
-		}
-
 		.hero-title {
 			font-size: 2.5rem;
 		}
-
 		.hero-subtitle {
 			font-size: 1rem;
 		}
-
 		.cta-btn {
 			width: 100%;
 			padding: 0.7rem 1.2rem;
 		}
-
 		.hero-image-container,
 		.about-image-container {
 			width: 300px;
 			height: 300px;
 		}
-
 		.feature-icon,
 		.product-category h3 {
 			font-size: 2.5rem;
 		}
-
 		.feature-card p,
 		.product-category p {
 			font-size: 0.85rem;
 		}
-
 		.stats {
 			flex-direction: column;
 			gap: 1rem;
 		}
-
 		.stat-number {
 			font-size: 2rem;
 		}
-
 		.stat-label {
 			font-size: 0.8rem;
 		}
-
 		.contact-item {
 			font-size: 1rem;
 		}
-
 		.contact-item svg {
 			width: 24px;
 			height: 24px;
 		}
-
-		.contact-item h4 {
-			font-size: 0.9rem;
-		}
-
-		.contact-item p {
-			font-size: 0.8rem;
-		}
-
 		.program-image-container {
 			height: 300px;
 		}
-
 		.scp-program-card h3 {
 			font-size: 1rem;
 			padding: 1rem;
 		}
-
 		.close-overlay {
 			top: 1rem;
 			right: 1rem;
 			width: 40px;
 			height: 40px;
 		}
-
 		.close-overlay svg {
 			width: 20px;
 			height: 20px;
 		}
-
-		.overlay-image-container {
-			max-width: 95%;
-			padding: 1rem;
-		}
-
-		.footer-logo-image {
-			width: 50px;
-			height: 50px;
-		}
-
-		.footer-logo p {
-			font-size: 0.8rem;
-		}
-
-		.footer-section h4 {
-			font-size: 0.9rem;
-		}
-
-		.footer-section a {
-			font-size: 0.8rem;
-		}
 	}
 
 	@media (max-width: 480px) {
-		.landing-page {
-			padding-top: 70px;
-		}
-
-		.header-container {
-			padding: 0 1rem;
-		}
-
-		.logo-text h1 {
-			font-size: 1.5rem;
-			display: none;
-		}
-
-		.logo-text p {
-			font-size: 0.8rem;
-			display: none;
-		}
-
-		.hero-section {
-			padding: 2rem 0;
-		}
-
 		.hero-title {
 			font-size: 2rem;
 		}
-
 		.hero-subtitle {
 			font-size: 0.9rem;
 		}
-
 		.hero-image-container,
 		.about-image-container {
 			width: 250px;
 			height: 250px;
 		}
-
 		.section-header h2 {
 			font-size: 2rem;
 		}
-
 		.section-header p {
 			font-size: 1rem;
 		}
-
 		.feature-card,
 		.product-category {
 			padding: 1.5rem;
 		}
-
 		.contact-form {
 			padding: 1.5rem;
 		}
