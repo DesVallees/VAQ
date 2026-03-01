@@ -36,7 +36,7 @@
 			if (locationDoc.exists()) {
 				const data = locationDoc.data();
 				location = {
-					id: locationDoc.id,
+					id: (data.id ?? locationDoc.id) as string,
 					name: data.name || '',
 					address: data.address || '',
 					createdAt: data.createdAt?.toDate() || new Date(),
@@ -95,8 +95,9 @@
 		successMessage = '';
 
 		try {
-			// Prepare data for Firestore
+			// Prepare data for Firestore (include id for Flutter compatibility)
 			const updateData = {
+				id: location.id,
 				name: formData.name?.trim(),
 				address: formData.address?.trim(),
 				updatedAt: serverTimestamp(),

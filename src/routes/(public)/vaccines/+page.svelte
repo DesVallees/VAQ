@@ -66,13 +66,13 @@
 						<div class="card-image-wrap">
 							<img
 								src={product.resolvedImageUrl}
-								alt={product.name}
+								alt={product.commonName || product.name}
 								loading="lazy"
 								on:error={(e) => handleImageError(e, product.type)}
 							/>
 						</div>
 						<div class="card-body">
-							<h2 class="card-title">{product.name}</h2>
+							<h2 class="card-title">{product.commonName || product.name}</h2>
 							<p class="card-price">{formatPrice(product)}</p>
 							<p class="card-description">{shortDescription(product.description)}</p>
 						</div>

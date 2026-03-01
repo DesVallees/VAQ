@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { User, UserType } from '../../../../types';
+	import { normalizeUserType } from '../../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 	import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -47,7 +48,7 @@
 					photoUrl: data.photoUrl || '',
 					phoneNumber: data.phoneNumber || '',
 					isAdmin: data.isAdmin || false,
-					userType: data.userType || 'normal',
+					userType: normalizeUserType(data.userType),
 					patientProfileIds: data.patientProfileIds || [],
 					preferredLocationId: data.preferredLocationId || '',
 					createdAt: data.createdAt?.toDate() || new Date(),

@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import type { Article, ArticleCategory } from '../../../types';
 	import { db, storage } from '$lib/firebase/vaqmas';
-	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+	import { doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
@@ -26,10 +26,11 @@
 	};
 
 	// Available options
-	const articleCategories: ArticleCategory[] = ['education', 'promotion', 'announcement'];
+	const articleCategories: ArticleCategory[] = ['news', 'education', 'promotion', 'announcement'];
 
 	// Spanish translations for article categories
-	const articleCategoryLabels = {
+	const articleCategoryLabels: Record<ArticleCategory, string> = {
+		news: 'Noticias',
 		education: 'Educación',
 		promotion: 'Promoción',
 		announcement: 'Anuncio',
@@ -125,22 +126,26 @@
 				formData.heroImageUrl = `${imageName}`;
 			}
 
-			// Prepare data for Firestore
+			const id = crypto.randomUUID();
+			const publishedAt = formData.publishedAt
+				? Timestamp.fromDate(new Date(formData.publishedAt))
+				: null;
+
 			const articleData = {
-				...formData,
-				createdAt: serverTimestamp(),
+				id,
+				title: formData.title ?? '',
+				excerpt: formData.excerpt ?? '',
+				body: formData.body ?? '',
+				heroImageUrl: formData.heroImageUrl ?? '',
+				publishedAt,
 				updatedAt: serverTimestamp(),
-				publishedAt: formData.publishedAt ? new Date(formData.publishedAt) : null,
+				category: formData.category ?? 'education',
+				tags: formData.tags ?? [],
+				author: formData.author ?? '',
+				createdAt: serverTimestamp(),
 			};
 
-			// Remove undefined values
-			Object.keys(articleData).forEach((key) => {
-				if (articleData[key as keyof typeof articleData] === undefined) {
-					delete articleData[key as keyof typeof articleData];
-				}
-			});
-
-			await addDoc(collection(db, 'articles'), articleData);
+			await setDoc(doc(db, 'articles', id), articleData);
 
 			successMessage = 'Artículo creado exitosamente';
 			setTimeout(() => {

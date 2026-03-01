@@ -6,6 +6,26 @@ import { getImageUrl } from '../lib/utils/imageUtils';
 
 export type ProductWithImage = Product & { resolvedImageUrl: string };
 
+/** Convert age to months for comparable sorting (ageUnit: months | years). */
+function ageToMonths(age: number, unit: 'months' | 'years' | undefined): number {
+	if (unit === 'years') return age * 12;
+	return age;
+}
+
+/** Sort products by min age (respecting ageUnit), then by max age. */
+function sortByMinMaxAge<T extends { minAge?: number; maxAge?: number; ageUnit?: 'months' | 'years' }>(
+	list: T[]
+): T[] {
+	return [...list].sort((a, b) => {
+		const minA = ageToMonths(a.minAge ?? 0, a.ageUnit);
+		const minB = ageToMonths(b.minAge ?? 0, b.ageUnit);
+		if (minA !== minB) return minA - minB;
+		const maxA = ageToMonths(a.maxAge ?? 0, a.ageUnit);
+		const maxB = ageToMonths(b.maxAge ?? 0, b.ageUnit);
+		return maxA - maxB;
+	});
+}
+
 interface PublicProductsState {
 	products: ProductWithImage[];
 	loading: boolean;
@@ -25,15 +45,15 @@ const store = writable<PublicProductsState>(initialState);
 export const publicProductsStore = store;
 
 export const vaccines = derived(store, ($s) =>
-	$s.products.filter((p) => p.type === 'vaccine')
+	sortByMinMaxAge($s.products.filter((p) => p.type === 'vaccine'))
 );
 
 export const programs = derived(store, ($s) =>
-	$s.products.filter((p) => p.type === 'bundle' && !p.isHidden)
+	sortByMinMaxAge($s.products.filter((p) => p.type === 'bundle' && !p.isHidden))
 );
 
 export const packages = derived(store, ($s) =>
-	$s.products.filter((p) => p.type === 'package')
+	sortByMinMaxAge($s.products.filter((p) => p.type === 'package'))
 );
 
 export function getProductById(id: string): ProductWithImage | undefined {
@@ -53,7 +73,7 @@ export async function loadProductsIfNeeded(): Promise<void> {
 				const data = docSnap.data();
 				const resolvedImageUrl = await getImageUrl(data.imageUrl, data.type);
 				return {
-					id: docSnap.id,
+					id: (data.id ?? docSnap.id) as string,
 					...data,
 					createdAt: data.createdAt?.toDate() ?? new Date(),
 					resolvedImageUrl

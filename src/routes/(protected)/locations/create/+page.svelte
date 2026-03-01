@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import type { Location } from '../../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+	import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 	import { fly } from 'svelte/transition';
 	import { toastStore } from '../../../stores/toast';
 
@@ -55,14 +55,15 @@
 		successMessage = '';
 
 		try {
-			// Prepare data for Firestore
+			const id = crypto.randomUUID();
 			const locationData = {
+				id,
 				name: formData.name.trim(),
 				address: formData.address.trim(),
 				createdAt: serverTimestamp(),
 			};
 
-			await addDoc(collection(db, 'locations'), locationData);
+			await setDoc(doc(db, 'locations', id), locationData);
 
 			successMessage = 'Ubicación creada exitosamente';
 			setTimeout(() => {

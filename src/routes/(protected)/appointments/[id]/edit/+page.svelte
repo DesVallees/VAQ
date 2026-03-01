@@ -6,16 +6,20 @@
 		AppointmentType,
 		AppointmentStatus,
 		User,
-		Pediatrician,
 		Location,
 		Product,
 	} from '../../../../types';
+	import { normalizeUserType } from '../../../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import {
 		doc,
 		getDoc,
 		updateDoc,
+		setDoc,
+		writeBatch,
+		deleteDoc,
 		serverTimestamp,
+		Timestamp,
 		getDocs,
 		collection,
 	} from 'firebase/firestore';
@@ -31,7 +35,7 @@
 
 	// Data for dropdowns
 	let patients: User[] = [];
-	let pediatricians: Pediatrician[] = [];
+	let doctors: Array<{ id: string; displayName: string | null; email: string; specialty?: string }> = [];
 	let locations: Location[] = [];
 	let products: Product[] = [];
 	let availableProducts: Array<{ id: string; label: string; description?: string }> = [];
@@ -78,6 +82,21 @@
 	};
 	const durationOptions = [15, 30, 45, 60, 90, 120];
 
+	/** Convert Date, Firestore Timestamp, string or number to Date for use with Timestamp.fromDate(). */
+	function toDate(value: unknown): Date {
+		if (value instanceof Date) return value;
+		if (
+			value &&
+			typeof value === 'object' &&
+			'toDate' in value &&
+			typeof (value as { toDate: () => Date }).toDate === 'function'
+		) {
+			return (value as { toDate: () => Date }).toDate();
+		}
+		if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+		return new Date();
+	}
+
 	// Validation
 	let errors: Record<string, string> = {};
 
@@ -88,10 +107,11 @@
 
 	const loadFormData = async () => {
 		try {
-			// Load patients (normal users) - simplified query to avoid index issues
-			const patientsSnapshot = await getDocs(collection(db, 'users'));
-			patients = patientsSnapshot.docs
-				.filter((doc) => doc.data().userType === 'normal')
+			const usersSnapshot = await getDocs(collection(db, 'users'));
+			const allUsers = usersSnapshot.docs;
+
+			patients = allUsers
+				.filter((d) => normalizeUserType(d.data().userType) === 'normal')
 				.sort((a, b) => {
 					const nameA = a.data().displayName || '';
 					const nameB = b.data().displayName || '';
@@ -104,22 +124,21 @@
 					lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
 				})) as User[];
 
-			// Load pediatricians - simplified query to avoid index issues
-			const pediatriciansSnapshot = await getDocs(collection(db, 'pediatricians'));
-			pediatricians = pediatriciansSnapshot.docs
+			doctors = allUsers
+				.filter((d) => normalizeUserType(d.data().userType) === 'pediatrician')
 				.sort((a, b) => {
-					const nameA = a.data().displayName || '';
-					const nameB = b.data().displayName || '';
+					const nameA = a.data().displayName || a.data().email || '';
+					const nameB = b.data().displayName || b.data().email || '';
 					return nameA.localeCompare(nameB);
 				})
-				.map((doc) => {
-					const data = doc.data();
+				.map((d) => {
+					const data = d.data();
 					return {
-						id: doc.id,
-						...data,
-						createdAt: data.createdAt?.toDate() || new Date(),
-						lastLoginAt: data.lastLoginAt?.toDate() || new Date(),
-					} as Pediatrician;
+						id: d.id,
+						displayName: data.displayName || null,
+						email: data.email || '',
+						specialty: data.specialty,
+					};
 				});
 
 			// Load locations - simplified query to avoid index issues
@@ -309,9 +328,10 @@
 					paymentRef: data.paymentRef || null,
 				} as Appointment;
 
-				// Initialize form data - ensure all fields are properly set
+				// Initialize form data - ensure dateTime is a Date (handles Firestore Timestamp)
 				formData = {
 					...appointment,
+					dateTime: toDate(appointment.dateTime),
 					type: appointment.type || 'consultation',
 					status: appointment.status || 'scheduled',
 					productIds: appointment.productIds || [],
@@ -374,7 +394,7 @@
 	};
 
 	const handleDoctorChange = () => {
-		const selectedDoctor = pediatricians.find((d) => d.id === formData.doctorId);
+		const selectedDoctor = doctors.find((d) => d.id === formData.doctorId);
 		if (selectedDoctor) {
 			formData.doctorName = selectedDoctor.displayName || selectedDoctor.email;
 			formData.doctorSpecialty = selectedDoctor.specialty;
@@ -434,29 +454,47 @@
 		successMessage = '';
 
 		try {
-			// Prepare data for Firestore
+			const dateTime = new Date(formData.dateTime!);
+			const wasScheduled = appointment.status === 'scheduled';
+			const nowScheduled = formData.status === 'scheduled';
+
+			// Prepare data for Firestore (spec: no updatedAt)
 			const updateData = {
 				patientId: formData.patientId,
-				patientName: formData.patientName,
+				patientName: formData.patientName || null,
 				doctorId: formData.doctorId,
-				doctorName: formData.doctorName,
-				doctorSpecialty: formData.doctorSpecialty,
-				dateTime: new Date(formData.dateTime!),
+				doctorName: formData.doctorName || null,
+				doctorSpecialty: formData.doctorSpecialty || null,
+				dateTime: Timestamp.fromDate(dateTime),
 				durationMinutes: formData.durationMinutes,
 				locationId: formData.locationId,
 				locationName: formData.locationName,
-				locationAddress: formData.locationAddress,
+				locationAddress: formData.locationAddress || null,
 				type: formData.type,
 				productIds: formData.productIds,
 				status: formData.status,
-				notes: formData.notes,
+				notes: formData.notes || null,
 				paymentStatus: formData.paymentStatus || null,
 				paymentRef: formData.paymentRef || null,
-				updatedAt: serverTimestamp(),
 				lastUpdatedAt: serverTimestamp(),
 			};
 
-			await updateDoc(doc(db, 'appointments', appointment.id), updateData);
+			const batch = writeBatch(db);
+			batch.update(doc(db, 'appointments', appointment.id), updateData);
+
+			if (nowScheduled) {
+				batch.set(doc(db, 'appointment_slots', appointment.id), {
+					appointmentId: appointment.id,
+					locationId: formData.locationId,
+					dateTime: Timestamp.fromDate(dateTime),
+					durationMinutes: formData.durationMinutes,
+					status: 'scheduled',
+				});
+			} else if (wasScheduled) {
+				batch.delete(doc(db, 'appointment_slots', appointment.id));
+			}
+
+			await batch.commit();
 
 			successMessage = 'Cita actualizada exitosamente';
 			setTimeout(() => {
@@ -485,9 +523,10 @@
 		}
 
 		try {
-			await updateDoc(doc(db, 'appointments', appointment.id), {
-				deletedAt: serverTimestamp(),
-			});
+			const batch = writeBatch(db);
+			batch.delete(doc(db, 'appointments', appointment.id));
+			batch.delete(doc(db, 'appointment_slots', appointment.id));
+			await batch.commit();
 
 			successMessage = 'Cita eliminada exitosamente';
 			setTimeout(() => {
@@ -569,7 +608,7 @@
 								class:error={errors.doctorId}
 							>
 								<option value="">Seleccionar doctor</option>
-								{#each pediatricians as doctor}
+								{#each doctors as doctor}
 									<option value={doctor.id}>
 										{doctor.displayName || doctor.email} - {doctor.specialty}
 									</option>

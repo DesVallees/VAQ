@@ -132,17 +132,19 @@
 		{#if selectedOptions && selectedOptions.length > 0}
 			<div class="selected-options">
 				{#each selectedOptions as optionId}
-					<span class="selected-tag">
-						{getSelectedOptionLabel(optionId)}
-						<button
-							type="button"
-							on:click={() => removeOption(optionId)}
-							class="remove-tag"
-							title="Eliminar"
-						>
-							×
-						</button>
-					</span>
+					{#if options.find((option) => option.id === optionId)}
+						<span class="selected-tag">
+							{getSelectedOptionLabel(optionId)}
+							<button
+								type="button"
+								on:click={() => removeOption(optionId)}
+								class="remove-tag"
+								title="Eliminar"
+							>
+								×
+							</button>
+						</span>
+					{/if}
 				{/each}
 			</div>
 		{/if}

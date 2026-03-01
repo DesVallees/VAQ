@@ -34,11 +34,11 @@
 </script>
 
 <svelte:head>
-	<title>{product ? `${product.name} | VAQ+` : 'Programa | VAQ+'}</title>
+	<title>{product ? `${product.commonName || product.name} | VAQ+` : 'Programa | VAQ+'}</title>
 	<meta
 		name="description"
 		content={product
-			? product.description?.slice(0, 160) ?? product.name
+			? product.description?.slice(0, 160) ?? product.commonName ?? product.name
 			: 'Información de programa en VAQ+'}
 	/>
 </svelte:head>
@@ -59,15 +59,15 @@
 					<div class="detail-image-wrap">
 						<img
 							src={product.resolvedImageUrl}
-							alt={product.name}
+							alt={product.commonName || product.name}
 							loading="lazy"
 							on:error={(e) => handleImageError(e, product.type)}
 						/>
 					</div>
 					<div class="detail-hero-text">
-						<h1>{product.name}</h1>
-						{#if product.commonName && product.commonName !== product.name}
-							<p class="common-name">{product.commonName}</p>
+						<h1>{product.commonName || product.name}</h1>
+						{#if product.name && product.name !== (product.commonName || product.name)}
+							<p class="official-name">{product.name}</p>
 						{/if}
 						<p class="detail-price">{formatPrice(product)}</p>
 						{#if product.targetMilestone}
@@ -89,7 +89,7 @@
 						<ul class="included-list">
 							{#each includedVaccines as vaccine (vaccine.id)}
 								<li>
-									<a href="/vaccines/{vaccine.id}">{vaccine.name}</a>
+									<a href="/vaccines/{vaccine.id}">{vaccine.commonName || vaccine.name}</a>
 								</li>
 							{/each}
 						</ul>
@@ -200,7 +200,8 @@
 		line-height: 1.3;
 	}
 
-	.common-name {
+	.common-name,
+	.official-name {
 		font-size: 1rem;
 		color: var(--surface-600, #6b7280);
 		margin: 0 0 0.5rem 0;

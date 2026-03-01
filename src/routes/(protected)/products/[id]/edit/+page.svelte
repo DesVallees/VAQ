@@ -180,7 +180,7 @@
 			if (productDoc.exists()) {
 				const data = productDoc.data();
 				product = {
-					id: productDoc.id,
+					id: (data.id ?? productDoc.id) as string,
 					type: data.type || 'vaccine',
 					name: data.name || '',
 					commonName: data.commonName || '',
@@ -421,9 +421,10 @@
 				formData.imageUrl = `${imageName}`;
 			}
 
-			// Prepare data for Firestore
+			// Prepare data for Firestore (include id for Flutter / clients)
 			const normalizedPrices = normalizeProductPrices(formData);
 			const updateData = {
+				id: product.id,
 				...formData,
 				updatedAt: serverTimestamp(),
 				price: normalizedPrices.price,

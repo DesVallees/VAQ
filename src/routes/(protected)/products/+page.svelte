@@ -280,7 +280,7 @@
 				type="text"
 				placeholder="Buscar productos..."
 				bind:value={searchTerm}
-				on:input={() => updateURL()}
+				on:blur={updateURL}
 				class="search-input"
 			/>
 		</div>

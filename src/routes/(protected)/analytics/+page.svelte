@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { normalizeUserType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 	import {
 		getDocs,
@@ -58,14 +59,12 @@
 			// Load all collections for analytics
 			const [
 				usersSnapshot,
-				pediatriciansSnapshot,
 				productsSnapshot,
 				appointmentsSnapshot,
 				articlesSnapshot,
 				locationsSnapshot,
 			] = await Promise.all([
 				getDocs(collection(db, 'users')),
-				getDocs(collection(db, 'pediatricians')),
 				getDocs(collection(db, 'products')),
 				getDocs(collection(db, 'appointments')),
 				getDocs(collection(db, 'articles')),
@@ -78,11 +77,13 @@
 				createdAt: doc.data().createdAt?.toDate() || new Date(),
 			}));
 
-			const pediatricians = pediatriciansSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-			}));
+			const pediatricians = usersSnapshot.docs
+				.filter((d) => normalizeUserType(d.data().userType) === 'pediatrician')
+				.map((doc) => ({
+					id: doc.id,
+					...doc.data(),
+					createdAt: doc.data().createdAt?.toDate() || new Date(),
+				}));
 
 			const products = productsSnapshot.docs.map((doc) => ({
 				id: doc.id,

@@ -141,7 +141,8 @@
 	};
 
 	const formatCategory = (category: ArticleCategory) => {
-		const categoryMap = {
+		const categoryMap: Record<ArticleCategory, string> = {
+			news: 'Noticias',
 			education: 'Educación',
 			promotion: 'Promoción',
 			announcement: 'Anuncio',
@@ -150,7 +151,8 @@
 	};
 
 	const getCategoryColor = (category: ArticleCategory) => {
-		const colorMap = {
+		const colorMap: Record<ArticleCategory, string> = {
+			news: '#8b5cf6',
 			education: '#10b981',
 			promotion: '#f59e0b',
 			announcement: '#3b82f6',
@@ -228,7 +230,7 @@
 				type="text"
 				placeholder="Buscar artículos por título, resumen o autor..."
 				bind:value={searchTerm}
-				on:input={() => updateURL()}
+				on:blur={updateURL}
 				class="search-input"
 			/>
 		</div>

@@ -15,6 +15,7 @@ export enum ProductCategory {
 
 // Base Product interface
 export interface BaseProduct extends BaseDocument {
+    id: string;
     type: ProductType;
     name: string;
     commonName: string;
@@ -81,7 +82,7 @@ export const isDoseBundle = (product: Product): product is DoseBundle => product
 export const isVaccinationProgram = (product: Product): product is VaccinationProgram => product.type === 'package';
 
 // Article types
-export type ArticleCategory = 'education' | 'promotion' | 'announcement';
+export type ArticleCategory = 'news' | 'education' | 'promotion' | 'announcement';
 
 export interface Article extends BaseDocument {
     title: string;
@@ -103,6 +104,14 @@ export interface Location extends BaseDocument {
 // User types
 export type UserType = 'normal' | 'pediatrician';
 
+/** Normalize userType from Firestore (accepts short form or Flutter enum string). */
+export function normalizeUserType(value: string | undefined): UserType {
+	if (!value) return 'normal';
+	const v = String(value);
+	if (v === 'pediatrician' || v === 'UserType.pediatrician') return 'pediatrician';
+	return 'normal';
+}
+
 export interface User extends BaseDocument {
     email: string;
     displayName: string | null;
@@ -115,20 +124,34 @@ export interface User extends BaseDocument {
     preferredLocationId: string | null;
 }
 
-// Pediatrician types
-export interface Pediatrician extends BaseDocument {
-    email: string;
-    displayName: string | null;
-    photoUrl: string | null;
-    phoneNumber: string;
-    lastLoginAt: Date | null;
-    isAdmin: boolean;
-    userType: 'pediatrician';
-    specialty: string;
-    licenseNumber: string;
-    clinicLocationIds: string[];
-    bio: string | null;
-    yearsExperience: number | null;
+// Payment types
+export type PaymentMethod = 'CREDIT_CARD' | 'BRE_B';
+export type PaymentStatus = 'PENDING' | 'PENDING_CONFIRMATION' | 'VERIFIED' | 'REJECTED' | 'ERROR';
+
+export interface Payment {
+    paymentId: string;
+    userId: string;
+    method: PaymentMethod;
+    status: PaymentStatus;
+    amount: number;
+    currency?: string;
+    bill?: string;
+    refPayco?: string;
+    transactionId?: string;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    initiatedAt: Date | null;
+    confirmedAt: Date | null;
+    confirmationPayload?: Record<string, unknown>;
+    errorMessage?: string;
+    errorDetails?: Record<string, unknown>;
+    recipientName?: string;
+    recipientLlave?: string;
+    receiptDownloadUrl?: string;
+    receiptStoragePath?: string;
+    appointmentIds: string[];
+    purchaseIds: string[];
+    chargeResult?: Record<string, unknown>;
 }
 
 // Appointment types

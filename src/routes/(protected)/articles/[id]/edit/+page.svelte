@@ -21,10 +21,11 @@
 	let formData: Partial<Article> = {};
 
 	// Available options
-	const articleCategories: ArticleCategory[] = ['education', 'promotion', 'announcement'];
+	const articleCategories: ArticleCategory[] = ['news', 'education', 'promotion', 'announcement'];
 
 	// Spanish translations for article categories
-	const articleCategoryLabels = {
+	const articleCategoryLabels: Record<ArticleCategory, string> = {
+		news: 'Noticias',
 		education: 'Educación',
 		promotion: 'Promoción',
 		announcement: 'Anuncio',
@@ -50,7 +51,7 @@
 			if (articleDoc.exists()) {
 				const data = articleDoc.data();
 				article = {
-					id: articleDoc.id,
+					id: (data.id ?? articleDoc.id) as string,
 					title: data.title || '',
 					excerpt: data.excerpt || '',
 					body: data.body || '',

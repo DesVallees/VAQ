@@ -10,6 +10,7 @@
 		orderBy,
 		limit,
 	} from 'firebase/firestore';
+	import { normalizeUserType } from '../types';
 
 	interface DashboardStats {
 		totalUsers: number;
@@ -131,9 +132,6 @@
 
 			// Load all stats in parallel with per-query logging
 			const usersPromise = wrap('users', () => getDocs(collection(db, 'users')));
-			const pediatriciansPromise = wrap('pediatricians', () =>
-				getDocs(collection(db, 'pediatricians')),
-			);
 			const productsPromise = wrap('products', () => getDocs(collection(db, 'products')));
 			const appointmentsPromise = wrap('appointments', () =>
 				getDocs(collection(db, 'appointments')),
@@ -161,7 +159,6 @@
 
 			const [
 				usersSnapshot,
-				pediatriciansSnapshot,
 				productsSnapshot,
 				appointmentsSnapshot,
 				todayAppointmentsSnapshot,
@@ -170,7 +167,6 @@
 				locationsSnapshot,
 			] = await Promise.all([
 				usersPromise,
-				pediatriciansPromise,
 				productsPromise,
 				appointmentsPromise,
 				todayAppointmentsPromise,
@@ -182,7 +178,9 @@
 			// Update stats
 			stats = {
 				totalUsers: usersSnapshot.size,
-				totalPediatricians: pediatriciansSnapshot.size,
+				totalPediatricians: usersSnapshot.docs.filter((d) =>
+					normalizeUserType(d.data().userType) === 'pediatrician',
+				).length,
 				totalProducts: productsSnapshot.size,
 				totalAppointments: appointmentsSnapshot.size,
 				todayAppointments: todayAppointmentsSnapshot.size,

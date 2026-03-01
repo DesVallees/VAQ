@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import type { Product, ProductType } from '../../../types';
 	import { db, storage } from '$lib/firebase/vaqmas';
-	import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+	import { doc, setDoc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 	import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 	import AutocompleteInput from '../../../components/AutocompleteInput.svelte';
 	import { onMount } from 'svelte';
@@ -309,9 +309,10 @@
 				formData.imageUrl = `${imageName}`;
 			}
 
-			// Prepare data for Firestore
+			const id = crypto.randomUUID();
 			const normalizedPrices = normalizeProductPrices(formData);
 			const productData = {
+				id,
 				...formData,
 				createdAt: serverTimestamp(),
 				updatedAt: serverTimestamp(),
@@ -329,7 +330,7 @@
 				}
 			});
 
-			await addDoc(collection(db, 'products'), productData);
+			await setDoc(doc(db, 'products', id), productData);
 
 			successMessage = 'Producto creado exitosamente';
 			setTimeout(() => {

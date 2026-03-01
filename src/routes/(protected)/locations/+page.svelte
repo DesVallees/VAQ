@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import type { Location } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
+	import { getDocs, query, collection, orderBy, deleteDoc, doc, where } from 'firebase/firestore';
 
 	let locations: Location[] = [];
 	let loading = true;
@@ -91,14 +91,45 @@
 	};
 
 	const handleDelete = async (location: Location) => {
-		if (confirm(`¿Estás seguro de que quieres eliminar la ubicación "${location.name}"?`)) {
-			try {
-				await deleteDoc(doc(db, 'locations', location.id));
-				await loadLocations();
-			} catch (error) {
-				console.error('Error deleting location:', error);
-				alert('Error al eliminar la ubicación');
+		try {
+			const [appointmentsSnapshot, usersSnapshot] = await Promise.all([
+				getDocs(
+					query(collection(db, 'appointments'), where('locationId', '==', location.id)),
+				),
+				getDocs(collection(db, 'users')),
+			]);
+			const appointmentCount = appointmentsSnapshot.size;
+			const pediatricianCount = usersSnapshot.docs.filter(
+				(d) =>
+					(d.data().userType === 'pediatrician' ||
+						d.data().userType === 'UserType.pediatrician') &&
+					((d.data().clinicLocationIds as string[] | undefined) ?? []).includes(
+						location.id,
+					),
+			).length;
+			if (appointmentCount > 0 || pediatricianCount > 0) {
+				const refs: string[] = [];
+				if (appointmentCount > 0) refs.push(`${appointmentCount} cita(s)`);
+				if (pediatricianCount > 0) refs.push(`${pediatricianCount} pediatra(s)`);
+				if (
+					!confirm(
+						`Esta ubicación está referenciada por: ${refs.join(
+							' y ',
+						)}. ¿Eliminar de todos modos?`,
+					)
+				) {
+					return;
+				}
+			} else if (
+				!confirm(`¿Estás seguro de que quieres eliminar la ubicación "${location.name}"?`)
+			) {
+				return;
 			}
+			await deleteDoc(doc(db, 'locations', location.id));
+			await loadLocations();
+		} catch (error) {
+			console.error('Error deleting location:', error);
+			alert('Error al eliminar la ubicación');
 		}
 	};
 
@@ -160,7 +191,7 @@
 				type="text"
 				placeholder="Buscar ubicaciones por nombre o dirección..."
 				bind:value={searchTerm}
-				on:input={() => updateURL()}
+				on:blur={updateURL}
 				class="search-input"
 			/>
 		</div>

@@ -4,7 +4,19 @@
 	import { goto } from '$app/navigation';
 	import type { Appointment, AppointmentStatus, AppointmentType, Product } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
-	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
+	import {
+		getDocs,
+		query,
+		collection,
+		orderBy,
+		deleteDoc,
+		doc,
+		writeBatch,
+		updateDoc,
+		setDoc,
+		serverTimestamp,
+		Timestamp,
+	} from 'firebase/firestore';
 
 	let appointments: Appointment[] = [];
 	let products: Product[] = [];
@@ -16,6 +28,21 @@
 	let showDetails = false;
 
 	const STORAGE_KEY = 'appointments-filters';
+
+	/** Convert Date, Firestore Timestamp, string or number to Date for use with Timestamp.fromDate(). */
+	function toDate(value: unknown): Date {
+		if (value instanceof Date) return value;
+		if (
+			value &&
+			typeof value === 'object' &&
+			'toDate' in value &&
+			typeof (value as { toDate: () => Date }).toDate === 'function'
+		) {
+			return (value as { toDate: () => Date }).toDate();
+		}
+		if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+		return new Date();
+	}
 
 	// Save to sessionStorage
 	function saveToStorage() {
@@ -198,7 +225,10 @@
 			)
 		) {
 			try {
-				await deleteDoc(doc(db, 'appointments', appointment.id));
+				const batch = writeBatch(db);
+				batch.delete(doc(db, 'appointments', appointment.id));
+				batch.delete(doc(db, 'appointment_slots', appointment.id));
+				await batch.commit();
 				await loadAppointments();
 			} catch (error) {
 				console.error('Error deleting appointment:', error);
@@ -209,10 +239,31 @@
 
 	const handleStatusChange = async (appointment: Appointment, newStatus: AppointmentStatus) => {
 		try {
-			// In a real app, you'd update the document here
-			// await updateDoc(doc(db, 'appointments', appointment.id), { status: newStatus });
+			const wasScheduled = appointment.status === 'scheduled';
+			const nowScheduled = newStatus === 'scheduled';
+
+			const batch = writeBatch(db);
+			batch.update(doc(db, 'appointments', appointment.id), {
+				status: newStatus,
+				lastUpdatedAt: serverTimestamp(),
+			});
+
+			if (nowScheduled) {
+				const dateTime = toDate(appointment.dateTime);
+				batch.set(doc(db, 'appointment_slots', appointment.id), {
+					appointmentId: appointment.id,
+					locationId: appointment.locationId,
+					dateTime: Timestamp.fromDate(dateTime),
+					durationMinutes: appointment.durationMinutes,
+					status: 'scheduled',
+				});
+			} else if (wasScheduled) {
+				batch.delete(doc(db, 'appointment_slots', appointment.id));
+			}
+
+			await batch.commit();
 			appointment.status = newStatus;
-			appointments = [...appointments]; // Trigger reactivity
+			appointments = [...appointments];
 		} catch (error) {
 			console.error('Error updating appointment status:', error);
 			alert('Error al actualizar el estado de la cita');
@@ -410,7 +461,7 @@
 				type="text"
 				placeholder="Buscar citas por paciente, ubicación o motivo..."
 				bind:value={searchTerm}
-				on:input={() => updateURL()}
+				on:blur={updateURL}
 				class="search-input"
 			/>
 		</div>

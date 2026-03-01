@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { getDocs, query, collection, orderBy, deleteDoc, doc } from 'firebase/firestore';
 	import type { User, UserType } from '../../types';
+	import { normalizeUserType } from '../../types';
 	import { db } from '$lib/firebase/vaqmas';
 
 	let users: User[] = [];
@@ -90,12 +91,16 @@
 			const usersSnapshot = await getDocs(
 				query(collection(db, 'users'), orderBy('createdAt', 'desc')),
 			);
-			users = usersSnapshot.docs.map((doc) => ({
-				id: doc.id,
-				...doc.data(),
-				createdAt: doc.data().createdAt?.toDate() || new Date(),
-				lastLoginAt: doc.data().lastLoginAt?.toDate() || null,
-			})) as User[];
+			users = usersSnapshot.docs.map((docSnap) => {
+				const data = docSnap.data();
+				return {
+					id: docSnap.id,
+					...data,
+					userType: normalizeUserType(data.userType),
+					createdAt: data.createdAt?.toDate() || new Date(),
+					lastLoginAt: data.lastLoginAt?.toDate() || null,
+				} as User;
+			});
 		} catch (error) {
 			console.error('Error loading users:', error);
 		} finally {
@@ -221,7 +226,7 @@
 				type="text"
 				placeholder="Buscar usuarios por email, nombre o teléfono..."
 				bind:value={searchTerm}
-				on:input={() => updateURL()}
+				on:blur={updateURL}
 				class="search-input"
 			/>
 		</div>
