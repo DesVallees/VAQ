@@ -162,21 +162,27 @@
 					<h3>Vacunas</h3>
 					<p>Programa completo de inmunización para todas las edades</p>
 					{#if $vaccines.length > 0}
-						<span class="product-teaser">Ver {$vaccines.length} vacunas</span>
+						<span class="product-teaser cta-btn primary"
+							>Ver {$vaccines.length} vacunas</span
+						>
 					{/if}
 				</a>
 				<a href="/programs" class="product-category">
 					<h3>Programas</h3>
 					<p>Combinaciones optimizadas para máxima protección</p>
 					{#if $programs.length > 0}
-						<span class="product-teaser">Ver {$programs.length} programas</span>
+						<span class="product-teaser cta-btn primary"
+							>Ver {$programs.length} programas</span
+						>
 					{/if}
 				</a>
 				<a href="/packages" class="product-category">
 					<h3>Paquetes</h3>
 					<p>Esquemas completos con descuentos especiales</p>
 					{#if $packages.length > 0}
-						<span class="product-teaser">Ver {$packages.length} paquetes</span>
+						<span class="product-teaser cta-btn primary"
+							>Ver {$packages.length} paquetes</span
+						>
 					{/if}
 				</a>
 			</div>
