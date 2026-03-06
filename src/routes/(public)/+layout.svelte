@@ -40,7 +40,7 @@
 	<title>VAQ+ - Vacunación y Cuidado Pediátrico</title>
 	<meta
 		name="description"
-		content="VAQ+ es la plataforma líder en vacunación y cuidado pediátrico. Conectamos familias con los mejores especialistas."
+		content="VAQ+ es la plataforma líder en vacunación y cuidado de la familia. Conectamos familias con los mejores especialistas para garantizar el bienestar de niños y adultos."
 	/>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png" />
